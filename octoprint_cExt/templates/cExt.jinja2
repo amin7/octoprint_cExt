@@ -1,0 +1,17 @@
+<div id="control-jog-led" class="jog-panel">
+	<h1>LED</h1>
+	<div class="btn-group-vertical" style="width: 75px;">
+		<button class="btn btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode('M150 R255 U255 B255 P255'); }">On</button>
+		<button class="btn btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode('M150 R100 U0 B0 P255'); }">Night</button>
+		<button class="btn btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode('M150 R0 U0 B0 P0'); }">Off</button>
+	</div>
+</div>
+
+<div id="temperature-presets">
+	<h1>presets</h1>
+	<div class="btn-group-vertical" style="width: 75px;">
+		<button class="btn btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode('M150 R255 U255 B255 P255'); }">On</button>
+		<button class="btn btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode('M150 R100 U0 B0 P255'); }">Night</button>
+		<button class="btn btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode('M150 R0 U0 B0 P0'); }">Off</button>
+	</div>
+</div>
