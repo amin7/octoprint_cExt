@@ -8,12 +8,57 @@ from __future__ import absolute_import
 # as necessary.
 #
 # Take a look at the documentation on what other plugin mixins are available.
-
 import octoprint.plugin
+
+from collections import deque
+class CCmdList:
+	def __init__(self, sendGCode):
+		self.sendGCode = sendGCode
+
+	class CCommand:
+		def __init__(self, command, callBack =None):
+			self.command = command
+			self.callBack = callBack
+
+	cmdList=deque()
+	processingCommand=None
+	response=""
+
+	def processCommandList(self):
+		if self.processingCommand==None:
+			if self.cmdList:
+				self.processingCommand=self.cmdList.popleft()
+				self.sendGCode(self.processingCommand.command)	
+				#self._printer.commands(
+				#send cmd
+
+
+	def addGCode(self,command,callBack = None):
+		commands = filter(None, command.split('\n')) #ignore emply
+		commlen=len(commands)
+		for i in range(commlen):
+			cmd=self.CCommand(commands[i]);
+			if(i==commlen-1):
+				cmd.callBack=callBack
+			self.cmdList.append(cmd)
+		self.processCommandList()
+
+	def processResponce(self,response):
+		if self.processingCommand!=None:
+			self.response+=response;
+			if(response.startswith('ok')):
+				if(self.processingCommand.callBack!=None):
+					self.processingCommand.callBack(self.response)
+				self.processingCommand=None
+				self.response=""
+				self.processCommandList()
+
 
 class CextPlugin(octoprint.plugin.SettingsPlugin,
                  octoprint.plugin.AssetPlugin,
-                 octoprint.plugin.TemplatePlugin):
+                 octoprint.plugin.TemplatePlugin,
+                 octoprint.plugin.SimpleApiPlugin,
+                 octoprint.plugin.StartupPlugin):
 
 	##~~ SettingsPlugin mixin
 
@@ -55,6 +100,29 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			)
 		)
 
+	cmdList=None
+
+	def on_after_startup(self):
+		self.cmdList=CCmdList(self._printer.commands)
+		self._logger.info("PluginA starting up")
+
+	def level_begin(self):
+		self._logger.info("level_begin")
+		self.cmdList.addGCode("M114",self._logger.info)
+
+	def gcode_received_hook(self, comm_instance, line, *args, **kwargs):
+		self.cmdList.processResponce(line)
+		return line
+
+	def get_api_commands(self):
+		return dict(levelBegin=[])
+
+	def on_api_command(self, command, data):
+		self._logger.info("on_api_command")
+		if(command == 'levelBegin'):
+			self.level_begin()
+
+
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
 # ("OctoPrint-PluginSkeleton"), you may define that here. Same goes for the other metadata derived from setup.py that
@@ -74,6 +142,7 @@ def __plugin_load__():
 
 	global __plugin_hooks__
 	__plugin_hooks__ = {
-		"octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information
+		"octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
+		"octoprint.comm.protocol.gcode.received":__plugin_implementation__.gcode_received_hook
 	}
 
