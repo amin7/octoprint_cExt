@@ -60,14 +60,14 @@
 			</div>
 			<div class="input-append span3">
 				<label for="auto_threshold">threshold</label>
-				<input class="input-mini text-right" type="number" id="auto_threshold" data-bind="value: settingsViewModel.settings.plugins.cExt.auto_threshold "/>
+				<input class="input-mini text-right" type="number" id="auto_threshold" step="0.01" data-bind="value: settingsViewModel.settings.plugins.cExt.auto_threshold "/>
+				<div class="add-on">
+					<span class="input-group-text">mm</span>
+				</div>
 			</div>
 			<div class="input-append span3">
 				<label for="z_travel">count </label>
 				<input class="input-mini text-right" type="number" id="auto_count" data-bind="value: settingsViewModel.settings.plugins.cExt.auto_count"/>
-				<div class="add-on">
-					<span class="input-group-text">mm</span>
-				</div>
 			</div>
 		</div>
 	</div>

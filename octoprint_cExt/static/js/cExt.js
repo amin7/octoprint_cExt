@@ -87,6 +87,6 @@ $(function() {
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
         dependencies: [ "settingsViewModel" ],
         // Elements to bind to, e.g. #settings_plugin_cExt, #tab_plugin_cExt, ...
-        elements: ["#temperature-presets","settings_plugin_cExt_form"]
+        elements: ["#side_bar_plugin_cExt","#settings_plugin_cExt_form"]
     });
 });
