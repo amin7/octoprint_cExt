@@ -24,6 +24,9 @@ class CCmdList:
 	processingCommand=None
 	response=""
 
+	def clearCommandList():
+		self.cmdList.clear()
+
 	def processCommandList(self):
 		if self.processingCommand==None:
 			if self.cmdList:
@@ -53,6 +56,7 @@ class CCmdList:
 				self.response=""
 				self.processCommandList()
 
+cmd_RelativePositioning ='G91'
 
 class CextPlugin(octoprint.plugin.SettingsPlugin,
                  octoprint.plugin.AssetPlugin,
@@ -64,7 +68,15 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def get_settings_defaults(self):
 		return dict(
-			# put your plugin's default settings here
+			speed_probe_fast=20,
+			speed_probe_fine=10,
+			probe_offset_x=10,
+			probe_offset_y=10,
+			plate_coner_xy=20,
+			z_travel=10,
+			auto_next=True,
+			auto_threshold=0.1,
+			auto_count=3
 		)
 
 	##~~ AssetPlugin mixin
@@ -77,6 +89,14 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			css=["css/cExt.css"],
 			less=["less/cExt.less"]
 		)
+
+	#~~ TemplatePlugin mixin
+
+	def get_template_configs(self):
+		return [
+			dict(type="sidebar", icon="arrows-alt"),
+			dict(type="settings")
+		]
 
 	##~~ Softwareupdate hook
 
@@ -103,15 +123,21 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	cmdList=None
 
 	def on_after_startup(self):
-		self.cmdList=CCmdList(self._printer.commands)
+		self.cmdList = CCmdList(self._printer.commands)
 		self._logger.info("PluginA starting up")
+
+	def level_begin_cb1(self,response):
+		self._logger.info("level_begin_cb1" + response)
 
 	def level_begin(self):
 		self._logger.info("level_begin")
-		self.cmdList.addGCode("M114",self._logger.info)
+		command = cmd_RelativePositioning+'\n'
+		command+="G38.2 F{feed} Z{distanse}".format(feed=200,distanse=-20);
+		self.cmdList.addGCode(command,self.level_begin_cb1)
 
 	def gcode_received_hook(self, comm_instance, line, *args, **kwargs):
-		self.cmdList.processResponce(line)
+		if self.cmdList!=None:
+			self.cmdList.processResponce(line)
 		return line
 
 	def get_api_commands(self):
@@ -121,7 +147,6 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		self._logger.info("on_api_command")
 		if(command == 'levelBegin'):
 			self.level_begin()
-
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py

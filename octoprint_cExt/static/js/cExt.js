@@ -6,33 +6,67 @@
  */
 $(function() {
     function CextViewModel(parameters) {
-        var self = this;
+      var self = this;
+      self.settingsViewModel = parameters[0];
 
-	self.onStartup = function() {
-		$('#control-jog-led').insertAfter('#control-jog-general');
-        $('#temperature-presets').insertAfter('#temp');
-	}
+      self.speed_probe_fast=ko.observable();
+      self.speed_probe_fine=ko.observable();
+      self.probe_offset_x=ko.observable();
+      self.probe_offset_y=ko.observable();
+      self.plate_coner_xy=ko.observable();
+      self.z_travel=ko.observable();
+      self.auto_next=ko.observable();
+      self.auto_threshold=ko.observable();
+      self.auto_count=ko.observable();
 
-        // assign the injected parameters, e.g.:
-        // self.loginStateViewModel = parameters[0];
-        // self.settingsViewModel = parameters[1];
-    self.funG114 = function() { 
-        OctoPrint.control.sendGcode("M114").done(function (responce) {
-        console.log(responce);
-      });
-    }
+      self.onBeforeBinding = function() {
+        self.speed_probe_fast(self.settingsViewModel.settings.plugins.cExt.speed_probe_fast());
+        self.speed_probe_fine(self.settingsViewModel.settings.plugins.cExt.speed_probe_fine());
+        self.probe_offset_x(self.settingsViewModel.settings.plugins.cExt.probe_offset_x());
+        self.probe_offset_y(self.settingsViewModel.settings.plugins.cExt.probe_offset_y());
+        self.plate_coner_xy(self.settingsViewModel.settings.plugins.cExt.plate_coner_xy());
+        self.z_travel(self.settingsViewModel.settings.plugins.cExt.z_travel());
+        self.auto_next(self.settingsViewModel.settings.plugins.cExt.auto_next());
+        self.auto_threshold(self.settingsViewModel.settings.plugins.cExt.auto_threshold());
+        self.auto_count(self.settingsViewModel.settings.plugins.cExt.auto_count());
+      }
 
-    self.level_begin = function(data) {
-        $.ajax({
-            url: API_BASEURL + "plugin/cExt",
-            type: "POST",
-            dataType: "json",
-            data: JSON.stringify({
-                command: "levelBegin"
-            }),
-            contentType: "application/json; charset=UTF-8"
+      self.onEventSettingsUpdated = function (payload) {
+        self.speed_probe_fast(self.settingsViewModel.settings.plugins.cExt.speed_probe_fast());
+        self.speed_probe_fine(self.settingsViewModel.settings.plugins.cExt.speed_probe_fine());
+        self.probe_offset_x(self.settingsViewModel.settings.plugins.cExt.probe_offset_x());
+        self.probe_offset_y(self.settingsViewModel.settings.plugins.cExt.probe_offset_y());
+        self.plate_coner_xy(self.settingsViewModel.settings.plugins.cExt.plate_coner_xy());
+        self.z_travel(self.settingsViewModel.settings.plugins.cExt.z_travel());
+        self.auto_next(self.settingsViewModel.settings.plugins.cExt.auto_next());
+        self.auto_threshold(self.settingsViewModel.settings.plugins.cExt.auto_threshold());
+        self.auto_count(self.settingsViewModel.settings.plugins.cExt.auto_count());
+      }
+
+    	self.onStartup = function() {
+    		$('#control-jog-led').insertAfter('#control-jog-general');
+    	}
+
+          // assign the injected parameters, e.g.:
+          // self.loginStateViewModel = parameters[0];
+          // self.settingsViewModel = parameters[1];
+      self.funG114 = function() { 
+          OctoPrint.control.sendGcode("M114").done(function (responce) {
+          console.log(responce);
         });
-    };
+      }
+
+      self.level_begin = function(data) {
+          $.ajax({
+              url: API_BASEURL + "plugin/cExt",
+              type: "POST",
+              dataType: "json",
+              data: JSON.stringify({
+                  command: "levelBegin"
+              }),
+              contentType: "application/json; charset=UTF-8"
+          });
+      };
 
   }//CextViewModel
 
@@ -51,8 +85,8 @@ $(function() {
     OCTOPRINT_VIEWMODELS.push({
         construct: CextViewModel,
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
-        dependencies: [ /* "loginStateViewModel", "settingsViewModel" */ ],
+        dependencies: [ "settingsViewModel" ],
         // Elements to bind to, e.g. #settings_plugin_cExt, #tab_plugin_cExt, ...
-        elements: ["#temperature-presets"]
+        elements: ["#temperature-presets","settings_plugin_cExt_form"]
     });
 });

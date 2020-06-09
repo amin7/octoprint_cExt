@@ -1,0 +1,75 @@
+<h4>Bed Leveling Wizard</h4>
+<form class="form-horizontal" id="settings_plugin_cExt_form">
+	<div class="row-fluid">
+		<h5>Probing Speed</h5>
+		<div class="row-fluid">
+			<div class="input-append span3">
+				<label for="speed_probe_fast">Fast </label>
+				<input class="input-mini text-right" type="number" id="speed_probe_fast" data-bind="value: settingsViewModel.settings.plugins.cExt.speed_probe_fast"/>
+				<div class="add-on">
+					<span class="input-group-text">mm/s</span>
+				</div>
+			</div>
+			<div class="input-append span3">
+				<label for="speed_probe_fine">Fine </label>
+				<input class="input-mini text-right" type="number" id="speed_probe_fine" data-bind="value: settingsViewModel.settings.plugins.cExt.speed_probe_fine"/>
+				<div class="add-on">
+					<span class="input-group-text">mm/s</span>
+				</div>
+			</div>
+		</div>
+		<h5>Probe offset</h5>
+		<div class="row-fluid">
+			<div class="input-append span3">
+				<label for="probe_offset_x">X offset </label>
+				<input class="input-mini text-right" type="number" id="probe_offset_x" data-bind="value: settingsViewModel.settings.plugins.cExt.probe_offset_x"/>
+				<div class="add-on">
+					<span class="input-group-text">mm</span>
+				</div>
+			</div>
+			<div class="input-append span3">
+				<label for="probe_offset_y">Y offset </label>
+				<input class="input-mini text-right" type="number" id="probe_offset_y" data-bind="value: settingsViewModel.settings.plugins.cExt.probe_offset_y"/>
+				<div class="add-on">
+					<span class="input-group-text">mm</span>
+				</div>
+			</div>
+		</div>
+		<h5>Dimension</h5>
+		<div class="row-fluid">
+			<div class="input-append span3">
+				<label for="plate_coner_xy">plate_coner_xy </label>
+				<input class="input-mini text-right" type="number" id="plate_coner_xy" data-bind="value: settingsViewModel.settings.plugins.cExt.plate_coner_xy"/>
+				<div class="add-on">
+					<span class="input-group-text">mm</span>
+				</div>
+			</div>
+			<div class="input-append span3">
+				<label for="z_travel">z_travel </label>
+				<input class="input-mini text-right" type="number" id="z_travel" data-bind="value: settingsViewModel.settings.plugins.cExt.z_travel"/>
+				<div class="add-on">
+					<span class="input-group-text">mm</span>
+				</div>
+			</div>
+		</div>
+		<h5>Go Next</h5>
+		<div class="row-fluid">
+			<div class="input-append span3">
+				<label for="auto_next">auto_next</label>
+				<input type="checkbox" class="input-checkbox" id="auto_next" data-bind="checked: settingsViewModel.settings.plugins.cExt.auto_next"/>
+			</div>
+			<div class="input-append span3">
+				<label for="auto_threshold">threshold</label>
+				<input class="input-mini text-right" type="number" id="auto_threshold" data-bind="value: settingsViewModel.settings.plugins.cExt.auto_threshold "/>
+			</div>
+			<div class="input-append span3">
+				<label for="z_travel">count </label>
+				<input class="input-mini text-right" type="number" id="auto_count" data-bind="value: settingsViewModel.settings.plugins.cExt.auto_count"/>
+				<div class="add-on">
+					<span class="input-group-text">mm</span>
+				</div>
+			</div>
+		</div>
+	</div>
+	<span>*speed, size setting is used from printer</span>
+</form>
