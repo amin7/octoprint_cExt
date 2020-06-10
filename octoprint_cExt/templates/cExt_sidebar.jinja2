@@ -1,11 +1,11 @@
 <div class="row-fluid" id="side_bar_plugin_cExt">
-	<button class="btn" data-bind="click: level_begin">Probe</button>
-	<button class="btn" data-bind="click: level_begin">Z hop</button>
-	<button class="btn" data-bind="click: level_begin">set Z(0)</button>
+	<button class="btn m-1" data-bind="click: probe">Probe</button>
+	<button class="btn" data-bind="click: z_hop">Z hop</button>
+	<button class="btn" data-bind="click: set_z_zero">set Z(0)</button>
  	<div class="w-100"></div>
 	<button class="btn btn-block" data-bind="click: level_begin">Init</button>
 	<button class="btn btn-block" data-bind="click: level_begin">Begin</button>
 	<button class="btn" data-bind="click: level_begin">Next</button>
-	<input type="checkbox" class="input-checkbox" data-bind="checked: settingsViewModel.settings.plugins.cExt.auto_next"/>
+	<input type="checkbox" class="input-checkbox" data-bind="checked: settingsViewModel.settings.plugins.cExt.auto_next"/> auto
 	<button class="btn btn-block" data-bind="click: level_begin">Stop</button>
 </div>

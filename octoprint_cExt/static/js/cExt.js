@@ -8,6 +8,7 @@ $(function() {
     function CextViewModel(parameters) {
       var self = this;
       self.settingsViewModel = parameters[0];
+      self.printerProfilesViewModel = parameters[1];
 
       self.speed_probe_fast=ko.observable();
       self.speed_probe_fine=ko.observable();
@@ -50,10 +51,13 @@ $(function() {
           // assign the injected parameters, e.g.:
           // self.loginStateViewModel = parameters[0];
           // self.settingsViewModel = parameters[1];
-      self.funG114 = function() { 
-          OctoPrint.control.sendGcode("M114").done(function (responce) {
-          console.log(responce);
-        });
+      self.set_z_zero = function() { 
+          OctoPrint.control.sendGcode("G92 Z0");// Set Position
+      }
+      
+      self.z_hop = function() { 
+        console.log(self.printerProfilesViewModel.currentProfileData());
+        OctoPrint.control.sendGcode(["G91","G0 Z"+self.z_travel()+" F"+self.printerProfilesViewModel.currentProfileData().axes.z.speed()]);
       }
 
       self.level_begin = function(data) {
@@ -63,6 +67,18 @@ $(function() {
               dataType: "json",
               data: JSON.stringify({
                   command: "levelBegin"
+              }),
+              contentType: "application/json; charset=UTF-8"
+          });
+      };
+      self.probe = function(data) {
+          $.ajax({
+              url: API_BASEURL + "plugin/cExt",
+              type: "POST",
+              dataType: "json",
+              data: JSON.stringify({
+                  command: "probe",
+                  distanse:-self.z_travel()
               }),
               contentType: "application/json; charset=UTF-8"
           });
@@ -85,7 +101,7 @@ $(function() {
     OCTOPRINT_VIEWMODELS.push({
         construct: CextViewModel,
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
-        dependencies: [ "settingsViewModel" ],
+        dependencies: [ "settingsViewModel", "printerProfilesViewModel" ],
         // Elements to bind to, e.g. #settings_plugin_cExt, #tab_plugin_cExt, ...
         elements: ["#side_bar_plugin_cExt","#settings_plugin_cExt_form"]
     });

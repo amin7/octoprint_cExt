@@ -22,7 +22,7 @@ class CCmdList:
 
 	cmdList=deque()
 	processingCommand=None
-	response=""
+	response=[]
 
 	def clearCommandList():
 		self.cmdList.clear()
@@ -36,8 +36,7 @@ class CCmdList:
 				#send cmd
 
 
-	def addGCode(self,command,callBack = None):
-		commands = filter(None, command.split('\n')) #ignore emply
+	def addGCode(self,commands,callBack = None):
 		commlen=len(commands)
 		for i in range(commlen):
 			cmd=self.CCommand(commands[i]);
@@ -48,13 +47,14 @@ class CCmdList:
 
 	def processResponce(self,response):
 		if self.processingCommand!=None:
-			self.response+=response;
-			if(response.startswith('ok')):
-				if(self.processingCommand.callBack!=None):
-					self.processingCommand.callBack(self.response)
-				self.processingCommand=None
-				self.response=""
-				self.processCommandList()
+			if not response.startswith("echo:busy: processing"):
+				self.response.append(response);
+				if(response.startswith('ok')):
+					if(self.processingCommand.callBack!=None):
+						self.processingCommand.callBack(self.response)
+					self.processingCommand=None
+					self.response=[]
+					self.processCommandList()
 
 cmd_RelativePositioning ='G91'
 
@@ -74,6 +74,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			probe_offset_y=10,
 			plate_coner_xy=20,
 			z_travel=10,
+			z_probe_threshold=1,
 			auto_next=True,
 			auto_threshold=0.1,
 			auto_count=3
@@ -121,10 +122,14 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		)
 
 	cmdList=None
+	printer_cfg=None
 
 	def on_after_startup(self):
 		self.cmdList = CCmdList(self._printer.commands)
+		self.printer_cfg=self._printer_profile_manager.get_current()
 		self._logger.info("PluginA starting up")
+		self._logger.info(self._printer_profile_manager.get_current())
+		self._logger.info(self._settings)
 
 	def level_begin_cb1(self,response):
 		self._logger.info("level_begin_cb1" + response)
@@ -132,21 +137,44 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	def level_begin(self):
 		self._logger.info("level_begin")
 		command = cmd_RelativePositioning+'\n'
-		command+="G38.2 F{feed} Z{distanse}".format(feed=200,distanse=-20);
+		command+="G38.2 F{feed} Z{dist}".format(feed=200,dist=-20);
 		self.cmdList.addGCode(command,self.level_begin_cb1)
+#------------------------------------------------------
+	def probe_cb2(self,response):
+		self._logger.info(["probe_cb2", response])
 
+	def probe_cb1(self,response):
+		self._logger.info(["probe_cb1", response])
+		for line in response:
+			if line.startswith("Error:Failed to reach target"):
+				return
+		command =[]
+		command.append("G0 F{feed} Z{dist}".format(feed=self.printer_cfg['axes']['z']["speed"],dist=self._settings.get_int(["z_probe_threshold"])));
+		command.append("G38.2 F{feed} Z{dist}".format(feed=self._settings.get_int(["speed_probe_fine"]),dist=-2*self._settings.get_int(["z_probe_threshold"])));
+		self.cmdList.addGCode(command,self.probe_cb2)
+
+	def	probe(self,data):
+		self._logger.info("probe")
+		command =[]
+		command.append(cmd_RelativePositioning)
+		command.append("G38.2 F{feed} Z{dist}".format(feed=self._settings.get_int(["speed_probe_fast"]),dist=data["distanse"]));
+		self.cmdList.addGCode(command,self.probe_cb1)
+#--------------------------------------------
 	def gcode_received_hook(self, comm_instance, line, *args, **kwargs):
 		if self.cmdList!=None:
 			self.cmdList.processResponce(line)
 		return line
 
 	def get_api_commands(self):
-		return dict(levelBegin=[])
+		return dict(levelBegin=[],
+					probe=['distanse'])
 
 	def on_api_command(self, command, data):
 		self._logger.info("on_api_command")
 		if(command == 'levelBegin'):
 			self.level_begin()
+		elif(command == 'probe'):
+			self.probe(data)
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
