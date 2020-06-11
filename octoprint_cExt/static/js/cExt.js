@@ -19,6 +19,8 @@ $(function() {
       self.auto_next=ko.observable();
       self.auto_threshold=ko.observable();
       self.auto_count=ko.observable();
+      self.z_probe_threshold=ko.observable();
+      
 
       self.onBeforeBinding = function() {
         self.speed_probe_fast(self.settingsViewModel.settings.plugins.cExt.speed_probe_fast());
@@ -29,6 +31,7 @@ $(function() {
         self.z_travel(self.settingsViewModel.settings.plugins.cExt.z_travel());
         self.auto_next(self.settingsViewModel.settings.plugins.cExt.auto_next());
         self.auto_threshold(self.settingsViewModel.settings.plugins.cExt.auto_threshold());
+        self.auto_count(self.settingsViewModel.settings.plugins.cExt.auto_count());
         self.auto_count(self.settingsViewModel.settings.plugins.cExt.auto_count());
       }
 
@@ -41,6 +44,7 @@ $(function() {
         self.z_travel(self.settingsViewModel.settings.plugins.cExt.z_travel());
         self.auto_next(self.settingsViewModel.settings.plugins.cExt.auto_next());
         self.auto_threshold(self.settingsViewModel.settings.plugins.cExt.auto_threshold());
+        self.auto_count(self.settingsViewModel.settings.plugins.cExt.auto_count());
         self.auto_count(self.settingsViewModel.settings.plugins.cExt.auto_count());
       }
 
@@ -78,7 +82,7 @@ $(function() {
               dataType: "json",
               data: JSON.stringify({
                   command: "probe",
-                  distanse:-self.z_travel()
+                  distanse: self.z_travel()
               }),
               contentType: "application/json; charset=UTF-8"
           });

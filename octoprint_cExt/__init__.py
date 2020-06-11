@@ -9,6 +9,7 @@ from __future__ import absolute_import
 #
 # Take a look at the documentation on what other plugin mixins are available.
 import octoprint.plugin
+import re
 
 from collections import deque
 class CCmdList:
@@ -24,7 +25,7 @@ class CCmdList:
 	processingCommand=None
 	response=[]
 
-	def clearCommandList():
+	def clearCommandList(self):
 		self.cmdList.clear()
 
 	def processCommandList(self):
@@ -37,12 +38,17 @@ class CCmdList:
 
 
 	def addGCode(self,commands,callBack = None):
-		commlen=len(commands)
-		for i in range(commlen):
-			cmd=self.CCommand(commands[i]);
-			if(i==commlen-1):
-				cmd.callBack=callBack
-			self.cmdList.append(cmd)
+		if isinstance(commands, list):  
+			commlen=len(commands)
+			for i in range(commlen):
+				cmd=self.CCommand(commands[i]);
+				if(i==commlen-1):
+					cmd.callBack=callBack
+				self.cmdList.append(cmd)
+			pass
+		else:
+			self.cmdList.append(self.CCommand(commands,callBack))
+			pass
 		self.processCommandList()
 
 	def processResponce(self,response):
@@ -140,25 +146,41 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		command+="G38.2 F{feed} Z{dist}".format(feed=200,dist=-20);
 		self.cmdList.addGCode(command,self.level_begin_cb1)
 #------------------------------------------------------
-	def probe_cb2(self,response):
-		self._logger.info(["probe_cb2", response])
-
-	def probe_cb1(self,response):
-		self._logger.info(["probe_cb1", response])
+	GCODE_PROBE_UP="G38.4 F{feed} Z{dist}"
+	GCODE_PROBE_DOWN="G38.2 F{feed} Z{dist}"
+	def probe_cb_stop_on_error(self,response):
 		for line in response:
 			if line.startswith("Error:Failed to reach target"):
+				self.cmdList.clearCommandList()
+				return False
+		return True
+
+	def probe_cb_echo(self,response):
+		for line in response:
+			match=re.match("^X:(?P<val_x>-?\d+\.\d+)\sY:(?P<val_y>-?\d+\.\d+)\sZ:(?P<val_z>-?\d+\.\d+)\sE:-?\d+\.\d+",line)
+			if(match):
+				self.cmdList.addGCode("M117 Probe Done Z:{zpos}".format(zpos=match.group('val_z')));
 				return
-		command =[]
-		command.append("G0 F{feed} Z{dist}".format(feed=self.printer_cfg['axes']['z']["speed"],dist=self._settings.get_int(["z_probe_threshold"])));
-		command.append("G38.2 F{feed} Z{dist}".format(feed=self._settings.get_int(["speed_probe_fine"]),dist=-2*self._settings.get_int(["z_probe_threshold"])));
-		self.cmdList.addGCode(command,self.probe_cb2)
+		self._logger.info("unproper answer")
+		pass
 
 	def	probe(self,data):
 		self._logger.info("probe")
-		command =[]
-		command.append(cmd_RelativePositioning)
-		command.append("G38.2 F{feed} Z{dist}".format(feed=self._settings.get_int(["speed_probe_fast"]),dist=data["distanse"]));
-		self.cmdList.addGCode(command,self.probe_cb1)
+		speed_z=self.printer_cfg['axes']['z']["speed"]
+		speed_probe_fast=self._settings.get_int(["speed_probe_fast"])
+		speed_probe_fine=self._settings.get_int(["speed_probe_fine"])
+		z_probe_threshold=self._settings.get_int(["z_probe_threshold"])
+		self.cmdList.addGCode(cmd_RelativePositioning)
+		#fast probe
+		self.cmdList.addGCode("G38.2 F{feed} Z{dist}".format(feed=speed_probe_fast,dist=-1*data["distanse"]),self.probe_cb_stop_on_error)
+		#up before fine probe
+		self.cmdList.addGCode("G0 F{feed} Z{dist}".format(feed=speed_probe_fast,dist=z_probe_threshold))
+		#fine probe
+		self.cmdList.addGCode("G38.2 F{feed} Z{dist}".format(feed=speed_probe_fine,dist=-2*z_probe_threshold),self.probe_cb_stop_on_error)
+		#show pos
+		self.cmdList.addGCode("M114",self.probe_cb_echo)
+		pass
+
 #--------------------------------------------
 	def gcode_received_hook(self, comm_instance, line, *args, **kwargs):
 		if self.cmdList!=None:
