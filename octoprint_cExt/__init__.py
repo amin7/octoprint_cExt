@@ -62,7 +62,13 @@ class CCmdList:
 					self.response=[]
 					self.processCommandList()
 
-cmd_RelativePositioning ='G91'
+GCODE_ABSOLUTE_POSITIONING ='G90'
+GCODE_RELATIVEPOSITIONING ='G91'
+GCODE_PROBE_UP="G38.4 F{feed} Z{dist}"
+GCODE_PROBE_DOWN="G38.2 F{feed} Z{dist}"
+GCODE_AUTO_HOME="G28 {axis}"
+GCODE_MOVE_XY="G0 F{feed} X{pos_x} Y{pos_y}"
+GCODE_MOVE_Z="G0 F{feed} Z{dist}"
 
 class CextPlugin(octoprint.plugin.SettingsPlugin,
                  octoprint.plugin.AssetPlugin,
@@ -130,6 +136,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	cmdList=None
 	printer_cfg=None
 
+
 	def on_after_startup(self):
 		self.cmdList = CCmdList(self._printer.commands)
 		self.printer_cfg=self._printer_profile_manager.get_current()
@@ -137,17 +144,51 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		self._logger.info(self._printer_profile_manager.get_current())
 		self._logger.info(self._settings)
 
-	def level_begin_cb1(self,response):
-		self._logger.info("level_begin_cb1" + response)
+#----------------------------------
+# bed level
+	levelPos=None
+
+	def level_next(self):
+		if(self.levelPos==None):
+			return
+		dx=self.printer_cfg['volume']['width']-2*self._settings.get_int(["plate_coner_xy"])
+		dy=self.printer_cfg['volume']['depth']-2*self._settings.get_int(["plate_coner_xy"])
+		speed=self.printer_cfg['axes']['x']["speed"]
+
+		if(self.levelPos==0):
+			dx=0;
+		elif(self.levelPos==1):
+			dy=0;
+		elif(self.levelPos==2):
+			dx=0;
+			dy=-dy	
+		else:
+			dx=-dx;
+			dy=0	
+
+		self.levelPos+=1;
+		if(self.levelPos>3):
+			self.levelPos=0
+
+		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING);
+		self.cmdList.addGCode("G0 F{feed} X{dX} Y{dY}".format(feed=speed,dX=dx,dY=dy))
+		pass
 
 	def level_begin(self):
-		self._logger.info("level_begin")
-		command = cmd_RelativePositioning+'\n'
-		command+="G38.2 F{feed} Z{dist}".format(feed=200,dist=-20);
-		self.cmdList.addGCode(command,self.level_begin_cb1)
+		command=[]
+		command.append(GCODE_RELATIVEPOSITIONING)
+		command.append(GCODE_MOVE_Z.format(feed=self.printer_cfg['axes']['z']["speed"],dist=self._settings.get_int(["z_travel"])))
+		command.append(GCODE_AUTO_HOME.format(axis="X Y"))
+		self.cmdList.addGCode(command)
+		self.cmdList.addGCode(GCODE_ABSOLUTE_POSITIONING);
+		self.cmdList.addGCode(GCODE_MOVE_XY.format(feed=self.printer_cfg['axes']['x']["speed"],
+													pos_x=self._settings.get_int(["probe_offset_x"])+self._settings.get_int(["plate_coner_xy"]),
+													pos_y=self._settings.get_int(["probe_offset_y"])+self._settings.get_int(["plate_coner_xy"])))
+		self.levelPos=0
+		pass
+
 #------------------------------------------------------
-	GCODE_PROBE_UP="G38.4 F{feed} Z{dist}"
-	GCODE_PROBE_DOWN="G38.2 F{feed} Z{dist}"
+
 	def probe_cb_stop_on_error(self,response):
 		for line in response:
 			if line.startswith("Error:Failed to reach target"):
@@ -170,11 +211,11 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		speed_probe_fast=self._settings.get_int(["speed_probe_fast"])
 		speed_probe_fine=self._settings.get_int(["speed_probe_fine"])
 		z_probe_threshold=self._settings.get_int(["z_probe_threshold"])
-		self.cmdList.addGCode(cmd_RelativePositioning)
+		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING)
 		#fast probe
 		self.cmdList.addGCode("G38.2 F{feed} Z{dist}".format(feed=speed_probe_fast,dist=-1*data["distanse"]),self.probe_cb_stop_on_error)
 		#up before fine probe
-		self.cmdList.addGCode("G0 F{feed} Z{dist}".format(feed=speed_probe_fast,dist=z_probe_threshold))
+		self.cmdList.addGCode(GCODE_MOVE_Z.format(feed=speed_probe_fast,dist=z_probe_threshold))
 		#fine probe
 		self.cmdList.addGCode("G38.2 F{feed} Z{dist}".format(feed=speed_probe_fine,dist=-2*z_probe_threshold),self.probe_cb_stop_on_error)
 		#show pos
@@ -188,15 +229,18 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		return line
 
 	def get_api_commands(self):
-		return dict(levelBegin=[],
+		return dict(level_begin=[],
+					level_next=[],
 					probe=['distanse'])
 
 	def on_api_command(self, command, data):
-		self._logger.info("on_api_command")
-		if(command == 'levelBegin'):
+		self._logger.info("on_api_command:"+command)
+		if(command == 'level_begin'):
 			self.level_begin()
 		elif(command == 'probe'):
 			self.probe(data)
+		elif(command == 'level_next'):
+			self.level_next()
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py

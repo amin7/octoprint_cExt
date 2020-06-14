@@ -70,7 +70,18 @@ $(function() {
               type: "POST",
               dataType: "json",
               data: JSON.stringify({
-                  command: "levelBegin"
+                  command: "level_begin"
+              }),
+              contentType: "application/json; charset=UTF-8"
+          });
+      };
+      self.level_next = function(data) {
+          $.ajax({
+              url: API_BASEURL + "plugin/cExt",
+              type: "POST",
+              dataType: "json",
+              data: JSON.stringify({
+                  command: "level_next"
               }),
               contentType: "application/json; charset=UTF-8"
           });
