@@ -80,8 +80,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def get_settings_defaults(self):
 		return dict(
-			speed_probe_fast=20,
-			speed_probe_fine=10,
+			speed_probe_fast=40,
+			speed_probe_fine=20,
 			probe_offset_x=10,
 			probe_offset_y=10,
 			plate_coner_xy=20,
@@ -207,17 +207,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def	probe(self,data):
 		self._logger.info("probe")
-		speed_z=self.printer_cfg['axes']['z']["speed"]
-		speed_probe_fast=self._settings.get_int(["speed_probe_fast"])
-		speed_probe_fine=self._settings.get_int(["speed_probe_fine"])
-		z_probe_threshold=self._settings.get_int(["z_probe_threshold"])
 		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING)
 		#fast probe
-		self.cmdList.addGCode("G38.2 F{feed} Z{dist}".format(feed=speed_probe_fast,dist=-1*data["distanse"]),self.probe_cb_stop_on_error)
-		#up before fine probe
-		self.cmdList.addGCode(GCODE_MOVE_Z.format(feed=speed_probe_fast,dist=z_probe_threshold))
-		#fine probe
-		self.cmdList.addGCode("G38.2 F{feed} Z{dist}".format(feed=speed_probe_fine,dist=-2*z_probe_threshold),self.probe_cb_stop_on_error)
+		self.cmdList.addGCode("G38.2 F{feed} Z{dist}".format(feed=data["feed"],dist=-1*data["distanse"]),self.probe_cb_stop_on_error)
 		#show pos
 		self.cmdList.addGCode("M114",self.probe_cb_echo)
 		pass
@@ -231,7 +223,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	def get_api_commands(self):
 		return dict(level_begin=[],
 					level_next=[],
-					probe=['distanse'])
+					probe=['distanse','feed'])
 
 	def on_api_command(self, command, data):
 		self._logger.info("on_api_command:"+command)

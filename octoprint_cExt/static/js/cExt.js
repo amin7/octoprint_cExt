@@ -49,7 +49,7 @@ $(function() {
       }
 
     	self.onStartup = function() {
-    		$('#control-jog-led').insertAfter('#control-jog-general');
+    //		$('#control-jog-led').insertAfter('#control-jog-general');
     	}
 
           // assign the injected parameters, e.g.:
@@ -86,17 +86,27 @@ $(function() {
               contentType: "application/json; charset=UTF-8"
           });
       };
-      self.probe = function(data) {
+
+      self.probe_cust = function(data,_distanse,_feed) {
           $.ajax({
               url: API_BASEURL + "plugin/cExt",
               type: "POST",
               dataType: "json",
               data: JSON.stringify({
                   command: "probe",
-                  distanse: self.z_travel()
+                  distanse: _distanse,
+                  feed: _feed
               }),
               contentType: "application/json; charset=UTF-8"
           });
+      };
+      
+      self.probe = function(data) {
+        self.probe_cust(data,self.z_travel(),self.speed_probe_fast());
+      };
+
+      self.probe_fine = function(data) {
+        self.probe_cust(data,self.z_travel()/2,self.speed_probe_fine());
       };
 
   }//CextViewModel
@@ -118,6 +128,6 @@ $(function() {
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
         dependencies: [ "settingsViewModel", "printerProfilesViewModel" ],
         // Elements to bind to, e.g. #settings_plugin_cExt, #tab_plugin_cExt, ...
-        elements: ["#side_bar_plugin_cExt","#settings_plugin_cExt_form"]
+        elements: ["#side_bar_plugin_cExt","#settings_plugin_cExt_form","#navbar_plugin_cExt"]
     });
 });
