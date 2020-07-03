@@ -20,6 +20,8 @@ $(function() {
       self.auto_threshold=ko.observable();
       self.auto_count=ko.observable();
       self.z_probe_threshold=ko.observable();
+      self.isOperational = ko.observable();
+      self.probe_result = ko.observable();
       
 
       self.onBeforeBinding = function() {
@@ -51,6 +53,26 @@ $(function() {
     	self.onStartup = function() {
     //		$('#control-jog-led').insertAfter('#control-jog-general');
     	}
+      self.fromCurrentData = function (data) {
+          self._processStateData(data.state);
+      };
+
+      self.fromHistoryData = function (data) {
+          self._processStateData(data.state);
+      };
+
+      self._processStateData = function (data) {
+       // console.log(data.flags);
+        self.isOperational(data.flags.operational);
+      };
+
+      self.onDataUpdaterPluginMessage = function(plugin, data) {
+        if (plugin != "cExt") {
+            return;
+        }
+        console.log(data);
+        self.probe_result(data.probe_result);
+    };
 
           // assign the injected parameters, e.g.:
           // self.loginStateViewModel = parameters[0];
@@ -126,7 +148,7 @@ $(function() {
     OCTOPRINT_VIEWMODELS.push({
         construct: CextViewModel,
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
-        dependencies: [ "settingsViewModel", "printerProfilesViewModel" ],
+        dependencies: [ "settingsViewModel", "printerProfilesViewModel" ,"controlViewModel"],
         // Elements to bind to, e.g. #settings_plugin_cExt, #tab_plugin_cExt, ...
         elements: ["#side_bar_plugin_cExt","#settings_plugin_cExt_form","#navbar_plugin_cExt"]
     });

@@ -192,6 +192,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	def probe_cb_stop_on_error(self,response):
 		for line in response:
 			if line.startswith("Error:Failed to reach target"):
+				self._plugin_manager.send_plugin_message(self._identifier, dict(probe_result='Failed'))
 				self.cmdList.clearCommandList()
 				return False
 		return True
@@ -200,6 +201,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		for line in response:
 			match=re.match("^X:(?P<val_x>-?\d+\.\d+)\sY:(?P<val_y>-?\d+\.\d+)\sZ:(?P<val_z>-?\d+\.\d+)\sE:-?\d+\.\d+",line)
 			if(match):
+				self._plugin_manager.send_plugin_message(self._identifier, dict(probe_result=match.group('val_z')))
 				self.cmdList.addGCode("M117 Probe Done Z:{zpos}".format(zpos=match.group('val_z')));
 				return
 		self._logger.info("unproper answer")
@@ -207,6 +209,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def	probe(self,data):
 		self._logger.info("probe")
+		self._plugin_manager.send_plugin_message(self._identifier, dict(probe_result='begin'))
 		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING)
 		#fast probe
 		self.cmdList.addGCode("G38.2 F{feed} Z{dist}".format(feed=data["feed"],dist=-1*data["distanse"]),self.probe_cb_stop_on_error)
