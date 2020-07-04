@@ -1,8 +1,25 @@
-<div id="control-jog-led" class="jog-panel">
-	<h1>LED</h1>
-	<div class="btn-group-vertical" style="width: 75px;">
-		<button class="btn btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode('M150 R255 U255 B255 P255'); }">On</button>
-		<button class="btn btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode('M150 R100 U0 B0 P255'); }">Night</button>
-		<button class="btn btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode('M150 R0 U0 B0 P0'); }">Off</button>
-	</div>
+<div class="card">
+    <div class="card-header">
+        <b>cExt:Engraver</b>        
+    </div>
+    <div class="card-body"> 
+    	<input type="text" class="col-md-8" placeholder="selected gcode file" data-bind="value: file_selected_path()" readonly>
+    	<span id=id_file_selected_dimmention ></span>
+        <div class="row">
+            <div class="w-100"></div>
+            <button class="btn btn-warning col-sm m-1" type="button" data-bind="click: function(){console.log($data['gcodeAnalysis']);}" >Probe Area</button>
+    
+            <div class="w-100"></div>
+            <button class="btn btn-warning btn-block m-1" type="button" onclick="engraver_probeStop()" >Clear/Stop</button>
+            <input type="number" class="col-md-auto m-1" id="id_ToolChangeZ" min="1" max="200">
+            <button class="btn btn-info col-sm m-1" type="button" onclick="controls_gotoToPos(0,0,$('#id_ToolChangeZ').val())">ToolChange</button>
+            <button class="btn btn-warning col-sm m-1" type="button" onclick="controls_ProbeTarget($('#id_ToolChangeZ').val()*-1)">Probe</button>
+            <button class="btn btn-dark col-sm m-1" type="button" onclick="marlin_addCommand(cmd_SetPosition000)">Set (0)</button>
+            <div class="w-100"></div>
+            <button class="btn btn-info col-sm m-1" type="button" onclick="marlin_modalMoveAxisStep('X',-$('#id_ProbeAreaSizeX').val())">Goto -sizeX</button>
+            <button class="btn btn-info col-sm m-1" type="button" onclick="marlin_modalMoveAxisStep('X',-$('#id_ProbeAreaSizeY').val())">Goto -sizeY</button>
+            <div class="w-100"></div>
+            <button class="btn btn-warning btn-block m-1" onclick="controls_GotoZero(false)" >Goto XY(0)</button>
+        </div>
+    </div>
 </div>

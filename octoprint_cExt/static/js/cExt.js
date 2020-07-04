@@ -22,8 +22,11 @@ $(function() {
       self.z_probe_threshold=ko.observable();
       self.isOperational = ko.observable();
       self.probe_result = ko.observable();
-      
+      self.file_selected_path=ko.observable();
+      self.file_selected_width=0;
+      self.file_selected_depth=0;
 
+      
       self.onBeforeBinding = function() {
         self.speed_probe_fast(self.settingsViewModel.settings.plugins.cExt.speed_probe_fast());
         self.speed_probe_fine(self.settingsViewModel.settings.plugins.cExt.speed_probe_fine());
@@ -67,12 +70,24 @@ $(function() {
       };
 
       self.onDataUpdaterPluginMessage = function(plugin, data) {
+        console.log(plugin);
         if (plugin != "cExt") {
             return;
         }
         console.log(data);
-        self.probe_result(data.probe_result);
-    };
+        if((typeof data.probe_resul)!='undefined')
+          self.probe_result(data.probe_result);
+        if((typeof data.file_selected_path)!='undefined'){
+          self.file_selected_path(data.file_selected_path);
+          }
+        if((typeof data.file_selected_width)!='undefined' && (typeof data.file_selected_depth)!='undefined'){
+          self.file_selected_width=data.file_selected_width;
+          self.file_selected_depth=data.file_selected_depth;
+          $("#id_file_selected_dimmention").text(self.file_selected_width+"x"+self.file_selected_depth+"mm");
+        }else{
+          $("#id_file_selected_dimmention").text("not available");
+        }
+      };
 
           // assign the injected parameters, e.g.:
           // self.loginStateViewModel = parameters[0];
@@ -150,6 +165,6 @@ $(function() {
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
         dependencies: [ "settingsViewModel", "printerProfilesViewModel" ,"controlViewModel"],
         // Elements to bind to, e.g. #settings_plugin_cExt, #tab_plugin_cExt, ...
-        elements: ["#side_bar_plugin_cExt","#settings_plugin_cExt_form","#navbar_plugin_cExt"]
+        elements: ["#side_bar_plugin_cExt","#settings_plugin_cExt_form","#navbar_plugin_cExt","#tab_plugin_cExt"]
     });
 });

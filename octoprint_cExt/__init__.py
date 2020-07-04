@@ -74,7 +74,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
                  octoprint.plugin.AssetPlugin,
                  octoprint.plugin.TemplatePlugin,
                  octoprint.plugin.SimpleApiPlugin,
-                 octoprint.plugin.StartupPlugin):
+                 octoprint.plugin.StartupPlugin,
+                 octoprint.plugin.EventHandlerPlugin):
 
 	##~~ SettingsPlugin mixin
 
@@ -135,6 +136,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	cmdList=None
 	printer_cfg=None
+	file_selected_path=""
+	file_selected_origin=None
 
 
 	def on_after_startup(self):
@@ -143,49 +146,74 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		self._logger.info("PluginA starting up")
 		self._logger.info(self._printer_profile_manager.get_current())
 		self._logger.info(self._settings)
+		pass
 
+	def on_event(self, event, payload):
+		self._logger.info(event)
+		self._logger.info(payload)
+		if(event=='FileSelected'):
+			self.file_selected_path=payload['path']
+			self.file_selected_origin=payload['origin']
+			self._update_front()
+			return
+		if(event=='UserLoggedIn'):
+			self._update_front()
+			return
+		pass
+
+	def _update_front(self):
+		data=dict()
+		data['file_selected_path']=self.file_selected_path
+		if self._file_manager.has_analysis(self.file_selected_origin,self.file_selected_path):
+			analysis=self._file_manager.get_metadata(self.file_selected_origin,self.file_selected_path)['analysis']
+			self._logger.info(analysis)
+			data['file_selected_width']=analysis['dimensions']['width']
+			data['file_selected_depth']=analysis['dimensions']['depth']
+		self._plugin_manager.send_plugin_message(self._identifier, data)
+
+	
 #----------------------------------
 # bed level
-	levelPos=None
+	# levelPos=None
 
-	def level_next(self):
-		if(self.levelPos==None):
-			return
-		dx=self.printer_cfg['volume']['width']-2*self._settings.get_int(["plate_coner_xy"])
-		dy=self.printer_cfg['volume']['depth']-2*self._settings.get_int(["plate_coner_xy"])
-		speed=self.printer_cfg['axes']['x']["speed"]
+	# def level_next(self):
+	# 	if(self.levelPos==None):
+	# 		return
+	# 	dx=self.printer_cfg['volume']['width']-2*self._settings.get_int(["plate_coner_xy"])
+	# 	dy=self.printer_cfg['volume']['depth']-2*self._settings.get_int(["plate_coner_xy"])
+	# 	speed=self.printer_cfg['axes']['x']["speed"]
 
-		if(self.levelPos==0):
-			dx=0;
-		elif(self.levelPos==1):
-			dy=0;
-		elif(self.levelPos==2):
-			dx=0;
-			dy=-dy	
-		else:
-			dx=-dx;
-			dy=0	
+	# 	if(self.levelPos==0):
+	# 		dx=0;
+	# 	elif(self.levelPos==1):
+	# 		dy=0;
+	# 	elif(self.levelPos==2):
+	# 		dx=0;
+	# 		dy=-dy	
+	# 	else:
+	# 		dx=-dx;
+	# 		dy=0	
 
-		self.levelPos+=1;
-		if(self.levelPos>3):
-			self.levelPos=0
+	# 	self.levelPos+=1;
+	# 	if(self.levelPos>3):
+	# 		self.levelPos=0
 
-		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING);
-		self.cmdList.addGCode("G0 F{feed} X{dX} Y{dY}".format(feed=speed,dX=dx,dY=dy))
-		pass
+	# 	self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING);
+	# 	self.cmdList.addGCode("G0 F{feed} X{dX} Y{dY}".format(feed=speed,dX=dx,dY=dy))
+	# 	pass
 
-	def level_begin(self):
-		command=[]
-		command.append(GCODE_RELATIVEPOSITIONING)
-		command.append(GCODE_MOVE_Z.format(feed=self.printer_cfg['axes']['z']["speed"],dist=self._settings.get_int(["z_travel"])))
-		command.append(GCODE_AUTO_HOME.format(axis="X Y"))
-		self.cmdList.addGCode(command)
-		self.cmdList.addGCode(GCODE_ABSOLUTE_POSITIONING);
-		self.cmdList.addGCode(GCODE_MOVE_XY.format(feed=self.printer_cfg['axes']['x']["speed"],
-													pos_x=self._settings.get_int(["probe_offset_x"])+self._settings.get_int(["plate_coner_xy"]),
-													pos_y=self._settings.get_int(["probe_offset_y"])+self._settings.get_int(["plate_coner_xy"])))
-		self.levelPos=0
-		pass
+	# def level_begin(self):
+	# 	command=[]
+	# 	command.append(GCODE_RELATIVEPOSITIONING)
+	# 	command.append(GCODE_MOVE_Z.format(feed=self.printer_cfg['axes']['z']["speed"],dist=self._settings.get_int(["z_travel"])))
+	# 	command.append(GCODE_AUTO_HOME.format(axis="X Y"))
+	# 	self.cmdList.addGCode(command)
+	# 	self.cmdList.addGCode(GCODE_ABSOLUTE_POSITIONING);
+	# 	self.cmdList.addGCode(GCODE_MOVE_XY.format(feed=self.printer_cfg['axes']['x']["speed"],
+	# 												pos_x=self._settings.get_int(["probe_offset_x"])+self._settings.get_int(["plate_coner_xy"]),
+	# 												pos_y=self._settings.get_int(["probe_offset_y"])+self._settings.get_int(["plate_coner_xy"])))
+	# 	self.levelPos=0
+	# 	pass
 
 #------------------------------------------------------
 
@@ -204,12 +232,13 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				self._plugin_manager.send_plugin_message(self._identifier, dict(probe_result=match.group('val_z')))
 				self.cmdList.addGCode("M117 Probe Done Z:{zpos}".format(zpos=match.group('val_z')));
 				return
+		self._plugin_manager.send_plugin_message(self._identifier, dict(probe_result="unproper answer"))
 		self._logger.info("unproper answer")
 		pass
 
 	def	probe(self,data):
 		self._logger.info("probe")
-		self._plugin_manager.send_plugin_message(self._identifier, dict(probe_result='begin'))
+		self._plugin_manager.send_plugin_message(self._identifier, dict(probe_result='probing'))
 		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING)
 		#fast probe
 		self.cmdList.addGCode("G38.2 F{feed} Z{dist}".format(feed=data["feed"],dist=-1*data["distanse"]),self.probe_cb_stop_on_error)
