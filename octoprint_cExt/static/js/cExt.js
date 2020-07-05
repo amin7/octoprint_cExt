@@ -21,11 +21,14 @@ $(function() {
       self.auto_count=ko.observable();
       self.z_probe_threshold=ko.observable();
       self.isOperational = ko.observable();
-      self.probe_result = ko.observable();
       self.file_selected_path=ko.observable();
       self.file_selected_width=0;
       self.file_selected_depth=0;
-
+      self.cmd_AbsolutePositioning="G90";
+      self.cmd_RelativePositioning="G91";
+      self.cmd_SetPosition000="G92 X0 Y0 Z0";
+      self.cmd_SetPositionZ0="G92 Z0";
+      self.cmd_DisableSteppers="M18"
       
       self.onBeforeBinding = function() {
         self.speed_probe_fast(self.settingsViewModel.settings.plugins.cExt.speed_probe_fast());
@@ -75,15 +78,19 @@ $(function() {
             return;
         }
         console.log(data);
-        if((typeof data.probe_resul)!='undefined')
-          self.probe_result(data.probe_result);
+
+        if((typeof data.probe_state)!='undefined'){
+           $("#id_probe_state").text(data.probe_state);
+        }
+
         if((typeof data.file_selected_path)!='undefined'){
           self.file_selected_path(data.file_selected_path);
           }
+
         if((typeof data.file_selected_width)!='undefined' && (typeof data.file_selected_depth)!='undefined'){
           self.file_selected_width=data.file_selected_width;
           self.file_selected_depth=data.file_selected_depth;
-          $("#id_file_selected_dimmention").text(self.file_selected_width+"x"+self.file_selected_depth+"mm");
+          $("#id_file_selected_dimmention").text(self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm");
         }else{
           $("#id_file_selected_dimmention").text("not available");
         }
@@ -92,13 +99,19 @@ $(function() {
           // assign the injected parameters, e.g.:
           // self.loginStateViewModel = parameters[0];
           // self.settingsViewModel = parameters[1];
-      self.set_z_zero = function() { 
-          OctoPrint.control.sendGcode("G92 Z0");// Set Position
+      self.relative_move_xy = function(offset_x,offset_y){
+        let feed = self.printerProfilesViewModel.currentProfileData().axes.x.speed();
+        OctoPrint.control.sendGcode([self.cmd_RelativePositioning,'G0 F'+feed+' X'+offset_x+' Y'+offset_y]);
+      }
+
+      self.absolute_move_xy = function(x,y){
+        let feed = self.printerProfilesViewModel.currentProfileData().axes.x.speed();
+        OctoPrint.control.sendGcode([self.cmd_AbsolutePositioning,'G0 F'+feed+' X'+x+' Y'+y]);
       }
       
-      self.z_hop = function() { 
-        console.log(self.printerProfilesViewModel.currentProfileData());
-        OctoPrint.control.sendGcode(["G91","G0 Z"+self.z_travel()+" F"+self.printerProfilesViewModel.currentProfileData().axes.z.speed()]);
+      self.z_hop = function(distance) { 
+    //    console.log(self.printerProfilesViewModel.currentProfileData());
+        OctoPrint.control.sendGcode([self.cmd_RelativePositioning,"G0 Z"+distance+" F"+self.printerProfilesViewModel.currentProfileData().axes.z.speed()]);
       }
 
       self.level_begin = function(data) {
@@ -124,7 +137,7 @@ $(function() {
           });
       };
 
-      self.probe_cust = function(data,_distanse,_feed) {
+      self.probe = function(_distanse,_feed) {
           $.ajax({
               url: API_BASEURL + "plugin/cExt",
               type: "POST",
@@ -138,14 +151,23 @@ $(function() {
           });
       };
       
-      self.probe = function(data) {
-        self.probe_cust(data,self.z_travel(),self.speed_probe_fast());
+//-----------------------------------------------------------
+    self.engrave=function() {
       };
 
-      self.probe_fine = function(data) {
-        self.probe_cust(data,self.z_travel()/2,self.speed_probe_fine());
-      };
+    self.probe_area=function() {
 
+      };
+    self.probe_area_stop=function() {
+
+      };
+      //rounded to grid
+    self.file_selected_width_grid=function() {
+      return self.file_selected_width;
+      };  
+    self.file_selected_depth_grid=function() {
+      return self.file_selected_depth;
+      };  
   }//CextViewModel
 
 

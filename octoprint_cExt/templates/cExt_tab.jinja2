@@ -4,22 +4,28 @@
     </div>
     <div class="card-body"> 
     	<input type="text" class="col-md-8" placeholder="selected gcode file" data-bind="value: file_selected_path()" readonly>
-    	<span id=id_file_selected_dimmention ></span>
-        <div class="row">
-            <div class="w-100"></div>
-            <button class="btn btn-warning col-sm m-1" type="button" data-bind="click: function(){console.log($data['gcodeAnalysis']);}" >Probe Area</button>
-    
-            <div class="w-100"></div>
-            <button class="btn btn-warning btn-block m-1" type="button" onclick="engraver_probeStop()" >Clear/Stop</button>
-            <input type="number" class="col-md-auto m-1" id="id_ToolChangeZ" min="1" max="200">
-            <button class="btn btn-info col-sm m-1" type="button" onclick="controls_gotoToPos(0,0,$('#id_ToolChangeZ').val())">ToolChange</button>
-            <button class="btn btn-warning col-sm m-1" type="button" onclick="controls_ProbeTarget($('#id_ToolChangeZ').val()*-1)">Probe</button>
-            <button class="btn btn-dark col-sm m-1" type="button" onclick="marlin_addCommand(cmd_SetPosition000)">Set (0)</button>
-            <div class="w-100"></div>
-            <button class="btn btn-info col-sm m-1" type="button" onclick="marlin_modalMoveAxisStep('X',-$('#id_ProbeAreaSizeX').val())">Goto -sizeX</button>
-            <button class="btn btn-info col-sm m-1" type="button" onclick="marlin_modalMoveAxisStep('X',-$('#id_ProbeAreaSizeY').val())">Goto -sizeY</button>
-            <div class="w-100"></div>
-            <button class="btn btn-warning btn-block m-1" onclick="controls_GotoZero(false)" >Goto XY(0)</button>
-        </div>
+    	<span id="id_file_selected_dimmention">unknow</span>
+    	<div class="w-100"></div> 
+    	<span id=id_cext_state>unknow</span>
+    	<label class="checkbox"><input type="checkbox">Rotate 90</label>    	
+    	<button class="btn btn-primary" type="button" data-bind="click: engrave()" >Engrave</button>
+    	<button class="btn btn-warning" type="button" data-bind="click: probe_area()" >Probe Area</button>
+        <button class="btn btn-secondary btn-block" data-bind="click: probe_area_stop()">Cansel/Stop</button>
+    	<hr>        
+        <button class="btn btn-dark btn-block" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPosition000); }">Set (0)</button>
+    	<button class="btn btn-primary btn-block" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_DisableSteppers); }" >Motors Off</button>
+        <button class="btn btn-info" type="button" data-bind="enable: isOperational(),click: function() {relative_move_xy(-file_selected_width_grid(),0);}">GotoX -width</button>
+        <button class="btn btn-info" type="button" data-bind="enable: isOperational(),click: function() {relative_move_xy( file_selected_width_grid(),0);}">GotoX +width</button>
+        <button class="btn btn-info" type="button"  data-bind="enable: isOperational(),click: function() {relative_move_xy(0,-file_selected_depth_grid());}">GotoY -depth</button>
+        <button class="btn btn-info" type="button"  data-bind="enable: isOperational(),click: function() {relative_move_xy(0, file_selected_depth_grid());}">GotoY +depth</button>
+        <div class="w-100"></div> 
+        <button class="btn btn-warning btn-block" data-bind="click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe_fast());}" >Goto XY(0)</button>
+        <hr>  
+        <button class="btn btn-warning col-sm" type="button" data-bind="click: function() {probe(z_travel(),speed_probe_fast());}">Probe</button>
+        <button class="btn btn-warning col-sm" type="button" data-bind="click: function() {z_hop(z_travel());}">z_hop</button>
+        <div class="w-100"></div> 
+        <input type="number" id="id_ToolChangeZ" min="1" max="200">
+        <button class="btn btn-info col-sm" type="button" data-bind="click: function() {probe(z_travel(),speed_probe_fast());}">ToolChange_Probe</button>
+        <button class="btn btn-info col-sm" type="button" onclick="controls_gotoToPos(0,0,$('#id_ToolChangeZ').val())">ToolChange_z_hop</button>
     </div>
 </div>
