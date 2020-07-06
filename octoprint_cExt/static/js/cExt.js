@@ -12,14 +12,13 @@ $(function() {
 
       self.speed_probe_fast=ko.observable();
       self.speed_probe_fine=ko.observable();
-      self.probe_offset_x=ko.observable();
-      self.probe_offset_y=ko.observable();
-      self.plate_coner_xy=ko.observable();
-      self.z_travel=ko.observable();
-      self.auto_next=ko.observable();
-      self.auto_threshold=ko.observable();
-      self.auto_count=ko.observable();
-      self.z_probe_threshold=ko.observable();
+      self.z_threshold=ko.observable();
+      self.z_travel=ko.observable();  
+
+      self.level_delta_z=ko.observable();
+      self.z_tool_change=ko.observable();
+      self.grid_area=ko.observable();
+
       self.isOperational = ko.observable();
       self.file_selected_path=ko.observable();
       self.file_selected_width=0;
@@ -30,30 +29,21 @@ $(function() {
       self.cmd_SetPositionZ0="G92 Z0";
       self.cmd_DisableSteppers="M18"
       
-      self.onBeforeBinding = function() {
+      self._upd_settings=function(){
         self.speed_probe_fast(self.settingsViewModel.settings.plugins.cExt.speed_probe_fast());
         self.speed_probe_fine(self.settingsViewModel.settings.plugins.cExt.speed_probe_fine());
-        self.probe_offset_x(self.settingsViewModel.settings.plugins.cExt.probe_offset_x());
-        self.probe_offset_y(self.settingsViewModel.settings.plugins.cExt.probe_offset_y());
-        self.plate_coner_xy(self.settingsViewModel.settings.plugins.cExt.plate_coner_xy());
+        self.z_threshold(self.settingsViewModel.settings.plugins.cExt.z_threshold());
         self.z_travel(self.settingsViewModel.settings.plugins.cExt.z_travel());
-        self.auto_next(self.settingsViewModel.settings.plugins.cExt.auto_next());
-        self.auto_threshold(self.settingsViewModel.settings.plugins.cExt.auto_threshold());
-        self.auto_count(self.settingsViewModel.settings.plugins.cExt.auto_count());
-        self.auto_count(self.settingsViewModel.settings.plugins.cExt.auto_count());
+        self.level_delta_z(self.settingsViewModel.settings.plugins.cExt.level_delta_z());
+        self.z_tool_change(self.settingsViewModel.settings.plugins.cExt.z_tool_change());
+        self.grid_area(self.settingsViewModel.settings.plugins.cExt.grid_area());
+      }
+      self.onBeforeBinding = function() {
+        self._upd_settings();
       }
 
       self.onEventSettingsUpdated = function (payload) {
-        self.speed_probe_fast(self.settingsViewModel.settings.plugins.cExt.speed_probe_fast());
-        self.speed_probe_fine(self.settingsViewModel.settings.plugins.cExt.speed_probe_fine());
-        self.probe_offset_x(self.settingsViewModel.settings.plugins.cExt.probe_offset_x());
-        self.probe_offset_y(self.settingsViewModel.settings.plugins.cExt.probe_offset_y());
-        self.plate_coner_xy(self.settingsViewModel.settings.plugins.cExt.plate_coner_xy());
-        self.z_travel(self.settingsViewModel.settings.plugins.cExt.z_travel());
-        self.auto_next(self.settingsViewModel.settings.plugins.cExt.auto_next());
-        self.auto_threshold(self.settingsViewModel.settings.plugins.cExt.auto_threshold());
-        self.auto_count(self.settingsViewModel.settings.plugins.cExt.auto_count());
-        self.auto_count(self.settingsViewModel.settings.plugins.cExt.auto_count());
+        self._upd_settings();
       }
 
     	self.onStartup = function() {
@@ -80,7 +70,7 @@ $(function() {
         console.log(data);
 
         if((typeof data.probe_state)!='undefined'){
-           $("#id_probe_state").text(data.probe_state);
+          $("#id_probe_state").text(data.probe_state);
         }
 
         if((typeof data.file_selected_path)!='undefined'){
@@ -95,7 +85,7 @@ $(function() {
           $("#id_file_selected_dimmention").text("not available");
         }
       };
-
+//---------------------------------------------------------
           // assign the injected parameters, e.g.:
           // self.loginStateViewModel = parameters[0];
           // self.settingsViewModel = parameters[1];
@@ -114,59 +104,63 @@ $(function() {
         OctoPrint.control.sendGcode([self.cmd_RelativePositioning,"G0 Z"+distance+" F"+self.printerProfilesViewModel.currentProfileData().axes.z.speed()]);
       }
 
-      self.level_begin = function(data) {
-          $.ajax({
-              url: API_BASEURL + "plugin/cExt",
-              type: "POST",
-              dataType: "json",
-              data: JSON.stringify({
-                  command: "level_begin"
-              }),
-              contentType: "application/json; charset=UTF-8"
-          });
-      };
-      self.level_next = function(data) {
-          $.ajax({
-              url: API_BASEURL + "plugin/cExt",
-              type: "POST",
-              dataType: "json",
-              data: JSON.stringify({
-                  command: "level_next"
-              }),
-              contentType: "application/json; charset=UTF-8"
-          });
-      };
-
       self.probe = function(_distanse,_feed) {
-          $.ajax({
-              url: API_BASEURL + "plugin/cExt",
-              type: "POST",
-              dataType: "json",
-              data: JSON.stringify({
-                  command: "probe",
-                  distanse: _distanse,
-                  feed: _feed
-              }),
-              contentType: "application/json; charset=UTF-8"
-          });
+        //console.log(_distanse);
+        $.ajax({
+            url: API_BASEURL + "plugin/cExt",
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify({
+                command: "probe",
+                distanse: parseFloat(_distanse),
+                feed: parseFloat(_feed)
+            }),
+            contentType: "application/json; charset=UTF-8"
+        });
       };
-      
+    self.probe_threshold = function(distanse,feed) {
+      let _distanse=parseFloat(distanse);
+      _distanse+=parseFloat(self.z_threshold());
+      self.probe(_distanse,feed)
+    }
 //-----------------------------------------------------------
     self.engrave=function() {
       };
 
-    self.probe_area=function() {
-
-      };
+    self.probe_area = function() {
+        $.ajax({
+            url: API_BASEURL + "plugin/cExt",
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify({
+                command: "probe_area",
+                width: self.file_selected_width_grid(),
+                depth: self.file_selected_depth_grid(),
+                feed_probe: self.speed_probe_fast(),
+                feed_z:self.printerProfilesViewModel.currentProfileData().axes.z.speed(),
+                feed_xy:self.printerProfilesViewModel.currentProfileData().axes.x.speed(),
+                grid:self.grid_area(),
+                level_delta_z: self.level_delta_z()
+            }),
+            contentType: "application/json; charset=UTF-8"
+        });
+    };
     self.probe_area_stop=function() {
 
-      };
+    };
       //rounded to grid
+    self.up_to_grid=function(val) {
+      _val=parseFloat(val)
+      if(_val===0){
+        return 0
+      }
+      return ((_val+self.grid_area())%self.grid_area())*self.grid_area();
+      };  
     self.file_selected_width_grid=function() {
-      return self.file_selected_width;
+      return self.up_to_grid(self.file_selected_width);
       };  
     self.file_selected_depth_grid=function() {
-      return self.file_selected_depth;
+      return self.up_to_grid(self.file_selected_depth);
       };  
   }//CextViewModel
 

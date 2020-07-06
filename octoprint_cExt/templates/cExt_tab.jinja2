@@ -21,11 +21,11 @@
         <div class="w-100"></div> 
         <button class="btn btn-warning btn-block" data-bind="click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe_fast());}" >Goto XY(0)</button>
         <hr>  
-        <button class="btn btn-warning col-sm" type="button" data-bind="click: function() {probe(z_travel(),speed_probe_fast());}">Probe</button>
+        <button class="btn btn-warning col-sm" type="button" data-bind="click: function() {probe_threshold(z_travel(),speed_probe_fast());}">Probe</button>
         <button class="btn btn-warning col-sm" type="button" data-bind="click: function() {z_hop(z_travel());}">z_hop</button>
         <div class="w-100"></div> 
-        <input type="number" id="id_ToolChangeZ" min="1" max="200">
-        <button class="btn btn-info col-sm" type="button" data-bind="click: function() {probe(z_travel(),speed_probe_fast());}">ToolChange_Probe</button>
-        <button class="btn btn-info col-sm" type="button" onclick="controls_gotoToPos(0,0,$('#id_ToolChangeZ').val())">ToolChange_z_hop</button>
+        <input type="number" id="id_z_tool_change" min="1" data-bind="value:z_tool_change()">
+        <button class="btn btn-info col-sm" type="button" data-bind="click: function() {probe_threshold($('#id_z_tool_change').val(),speed_probe_fast());}">ToolChange_Probe</button>
+        <button class="btn btn-info col-sm" type="button" data-bind="click: function() {z_hop($('#id_z_tool_change').val());}">ToolChange_z_hop</button>
     </div>
 </div>

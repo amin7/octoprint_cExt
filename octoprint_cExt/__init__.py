@@ -83,14 +83,11 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		return dict(
 			speed_probe_fast=40,
 			speed_probe_fine=20,
-			probe_offset_x=10,
-			probe_offset_y=10,
-			plate_coner_xy=20,
+			z_threshold=1,
 			z_travel=10,
-			z_probe_threshold=1,
-			auto_next=True,
-			auto_threshold=0.1,
-			auto_count=3
+			level_delta_z=1,
+			z_tool_change=20,
+			grid_area=10
 		)
 
 	##~~ AssetPlugin mixin
@@ -229,8 +226,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		for line in response:
 			match=re.match("^X:(?P<val_x>-?\d+\.\d+)\sY:(?P<val_y>-?\d+\.\d+)\sZ:(?P<val_z>-?\d+\.\d+)\sE:-?\d+\.\d+",line)
 			if(match):
-				self._plugin_manager.send_plugin_message(self._identifier, dict(probe_result=match.group('val_z')))
-				self.cmdList.addGCode("M117 Probe Done Z:{zpos}".format(zpos=match.group('val_z')));
+				result="Probe Done Z:{zpos}".format(zpos=match.group('val_z'));
+				self._plugin_manager.send_plugin_message(self._identifier, dict(probe_state=result))
+				self.cmdList.addGCode("M117 "+result);
 				return
 		self._plugin_manager.send_plugin_message(self._identifier, dict(probe_state="unproper answer"))
 		self._logger.info("unproper answer")
@@ -253,18 +251,15 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		return line
 
 	def get_api_commands(self):
-		return dict(level_begin=[],
-					level_next=[],
+		return dict(probe_area=['width','depth','feed_probe','feed_z','feed_xy','grid','level_delta_z'],
 					probe=['distanse','feed'])
 
 	def on_api_command(self, command, data):
 		self._logger.info("on_api_command:"+command)
-		if(command == 'level_begin'):
-			self.level_begin()
+		if(command == 'probe_area'):
+			pass
 		elif(command == 'probe'):
 			self.probe(data)
-		elif(command == 'level_next'):
-			self.level_next()
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
