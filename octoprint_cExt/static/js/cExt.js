@@ -95,12 +95,10 @@ $(function() {
 
           $("#id_cext_state").text(state);
 
-          if((typeof upd.width)!='undefined' && (typeof upd.depth)!='undefined'){
+          if(upd.width && upd.depth){
             self.file_selected_width=upd.width;
             self.file_selected_depth=upd.depth;
             $("#id_file_selected_dimmention").text(self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm");
-          }else{
-            $("#id_file_selected_dimmention").text("not available");
           }
         }
       };

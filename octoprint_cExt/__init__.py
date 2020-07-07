@@ -22,6 +22,7 @@ GCODE_AUTO_HOME="G28 {axis}"
 GCODE_MOVE_XY="G0 F{feed} X{pos_x} Y{pos_y}"
 GCODE_MOVE_Z="G0 F{feed} Z{dist}"
 GCODE_SET_POS_000="G92 X0 Y0 Z0"
+GCODE_SET_POS_00Z="G92 X0 Y0 Z{pos_z}"
 
 class CCmdList:
     def __init__(self, sendGCode):
@@ -167,9 +168,9 @@ class CBedLevelComtrol:
         self._report(data)
         pass
 
-    def on_error(self,err):
+    def on_error(self,err,payload):
         self._state=err
-        self.on_progress()
+        self._report(dict(state=self._state,payload=payload))
         self.cmdList.clearCommandList()
         self.cmdList.addGCode([GCODE_RELATIVEPOSITIONING, GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z)])
         pass
@@ -190,7 +191,7 @@ class CBedLevelComtrol:
                 if(self.probe_area_step):
                     zpos=match.group('val_z');
                 else:
-                    self.cmdList.addGCode(GCODE_SET_POS_000)
+                    self.cmdList.addGCode(GCODE_SET_POS_00Z.format(pos_z=self.level_delta_z))#aftre probe heigh
                 self.bedLevel.set(self.probe_area_step,zpos);
                 self.probe_area_step+=1;
                 if(self.probe_area_step<self.bedLevel.get_count()):
@@ -200,8 +201,9 @@ class CBedLevelComtrol:
                 else:
                     self._state="Done"
                     self._report(dict(_state="Done",bedLevel=self.bedLevel.m_ZheighArray))
+                return
             pass
-        self.on_error("unproper answer")
+        self.on_error("unproper answer",response)
         pass
 
     def make_probe(self):
@@ -234,7 +236,7 @@ class CBedLevelComtrol:
         self._state="Init"
         self.on_progress()
         #preinit
-        self.cmdList.addGCode([GCODE_SET_POS_000,GCODE_RELATIVEPOSITIONING,GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z)])
+        self.cmdList.addGCode([GCODE_SET_POS_000,GCODE_RELATIVEPOSITIONING,GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z), GCODE_MOVE_XY.format(feed=self.feed_xy,pos_x=1,pos_y=1)])
         self.make_probe()
         pass
 #--------------------------------------------------------------
@@ -266,7 +268,7 @@ class CProbeComtrol:
                 self._report(dict(state=result))
                 self.cmdList.addGCode("M117 "+result);
                 return
-        self._report(dict(state='unproper answer'))
+        self._report(dict(state='unproper answer',response=response))
         pass
 
     def start(self,data):
