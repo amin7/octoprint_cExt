@@ -69,20 +69,39 @@ $(function() {
         }
         console.log(data);
 
-        if((typeof data.probe_state)!='undefined'){
-          $("#id_probe_state").text(data.probe_state);
+        if((typeof data.CProbeComtrol)!='undefined'){
+          upd=data.CProbeComtrol;
+          if((typeof upd.state)!='undefined'){
+            $("#id_probe_state").text(upd.state);
+          }
         }
 
-        if((typeof data.file_selected_path)!='undefined'){
-          self.file_selected_path(data.file_selected_path);
+        if((typeof data.CBedLevelComtrol)!='undefined'){
+          upd=data.CBedLevelComtrol;
+          if((typeof upd.path)!='undefined'){
+            self.file_selected_path(upd.path);
           }
 
-        if((typeof data.file_selected_width)!='undefined' && (typeof data.file_selected_depth)!='undefined'){
-          self.file_selected_width=data.file_selected_width;
-          self.file_selected_depth=data.file_selected_depth;
-          $("#id_file_selected_dimmention").text(self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm");
-        }else{
-          $("#id_file_selected_dimmention").text("not available");
+          let state=""
+          if((typeof upd.state)!='undefined'){
+            state+=upd.state
+          }
+          if((typeof upd.step)!='undefined'){
+            state+=" "+ upd.step
+          }
+          if((typeof upd.count)!='undefined'){
+            state+="/"+ upd.count
+          }
+
+          $("#id_cext_state").text(state);
+
+          if((typeof upd.width)!='undefined' && (typeof upd.depth)!='undefined'){
+            self.file_selected_width=upd.width;
+            self.file_selected_depth=upd.depth;
+            $("#id_file_selected_dimmention").text(self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm");
+          }else{
+            $("#id_file_selected_dimmention").text("not available");
+          }
         }
       };
 //---------------------------------------------------------
@@ -128,14 +147,13 @@ $(function() {
       };
 
     self.probe_area = function() {
+     // console.log("probe_area");
         $.ajax({
             url: API_BASEURL + "plugin/cExt",
             type: "POST",
             dataType: "json",
             data: JSON.stringify({
                 command: "probe_area",
-                width: self.file_selected_width_grid(),
-                depth: self.file_selected_depth_grid(),
                 feed_probe: self.speed_probe_fast(),
                 feed_z:self.printerProfilesViewModel.currentProfileData().axes.z.speed(),
                 feed_xy:self.printerProfilesViewModel.currentProfileData().axes.x.speed(),
