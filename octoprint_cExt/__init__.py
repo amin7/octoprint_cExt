@@ -160,19 +160,17 @@ class CBedLevelComtrol:
         data['CBedLevelComtrol']=dict(path=self._path,width=self._width,depth=self._depth)
         pass
 
-    def on_progress(self):
-        data=dict()
-        data['step']=self.probe_area_step
-        data['count']=self.bedLevel.get_count()
-        data['state']=self._state
-        self._report(data)
+    def on_progress(self,state,payload=None):
+        self._state=state
+        self._report(dict(step=self.probe_area_step,count=self.bedLevel.get_count(),state=self._state,payload=payload))
+        self.cmdList.addGCode("M117 {state}: {step}/{count} ".format(state=self._state,step=self.probe_area_step,count=self.bedLevel.get_count()));
         pass
 
-    def on_error(self,err,payload):
+    def on_error(self,err,payload=None):
         self._state=err
         self._report(dict(state=self._state,payload=payload))
         self.cmdList.clearCommandList()
-        self.cmdList.addGCode([GCODE_RELATIVEPOSITIONING, GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z)])
+        self.cmdList.addGCode(["M117 Err:{state}".format(state=self._state),GCODE_RELATIVEPOSITIONING, GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z)])
         pass
 
     def probe_cb_stop_on_error(self,response):
@@ -195,12 +193,10 @@ class CBedLevelComtrol:
                 self.bedLevel.set(self.probe_area_step,zpos);
                 self.probe_area_step+=1;
                 if(self.probe_area_step<self.bedLevel.get_count()):
-                    self._state="Progress"
                     self.make_probe()
-                    self.on_progress()
+                    self.on_progress("Progress")
                 else:
-                    self._state="Done"
-                    self._report(dict(_state="Done",bedLevel=self.bedLevel.m_ZheighArray))
+                    on_progress("Done",self.bedLevel.m_ZheighArray)
                 return
             pass
         self.on_error("unproper answer",response)
@@ -224,8 +220,7 @@ class CBedLevelComtrol:
 
     def start(self,data):
         if self._width == None or self._depth == None:
-            self._state="not inited"
-            self.on_progress()
+            self.on_progress("not inited")
             return
         self.probe_area_step=0
         self.feed_probe=data['feed_probe']
@@ -233,8 +228,7 @@ class CBedLevelComtrol:
         self.feed_xy=data['feed_xy']
         self.level_delta_z=data['level_delta_z']
         self.bedLevel.init(self._width,self._depth,data['grid'])
-        self._state="Init"
-        self.on_progress()
+        self.on_progress("Init")
         #preinit
         self.cmdList.addGCode([GCODE_SET_POS_000,GCODE_RELATIVEPOSITIONING,GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z), GCODE_MOVE_XY.format(feed=self.feed_xy,pos_x=1,pos_y=1)])
         self.make_probe()
