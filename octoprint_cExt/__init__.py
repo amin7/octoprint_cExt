@@ -196,7 +196,7 @@ class CBedLevelComtrol:
                     self.make_probe()
                     self.on_progress("Progress")
                 else:
-                    on_progress("Done",self.bedLevel.m_ZheighArray)
+                    self.on_progress("Done",self.bedLevel.m_ZheighArray)
                 return
             pass
         self.on_error("unproper answer",response)
