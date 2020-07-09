@@ -76,26 +76,36 @@ class CCmdList:
                     self.processCommandList()
 
 #--------------------------------------------------------------
+# 
+#  *                           z2   --|
+#  *                 z0        |      |
+#  *                  |        |      + (z2-z1)
+#  *   z1             |        |      |
+#  * ---+-------------+--------+--  --|
+#  *   a1            a0        a2
+#  *    |<---delta_a---------->|
+#  *
+#  *  calc_z0 is the basis for all the Mesh Based correction. It is used to
+#  *  find the expected Z Height at a position between two known Z-Height locations.
+#  *
+#  *  It is fairly expensive with its 4 floating point additions and 2 floating point
+#  *  multiplications.
+
 class CBedLevel:
     m_sizeX=float('nan')
     m_sizeY=float('nan')
     m_grid=float('nan')
     m_ZheighArray=None
     #protected
+    def calc_z0(a0, a1, z1, a2, z2):
+        return z1 + (z2 - z1) * (a0 - a1) / (a2 - a1)
+    
     def cell_index(self,coord,max):
         if (coord <= 0):
             return 0;
         if (coord >= max):
             return max / self.m_grid;
         return coord / self.m_grid;
-
-    #public
-    def init(self,width,depth,grid):
-        # round up
-        self.m_sizeX=int((width+grid)/grid)*grid
-        self.m_sizeY=int((depth+grid)/grid)*grid
-        self.m_grid=grid
-        self.m_ZheighArray = [[float('nan') for x in range(int(self.m_sizeY/grid+1))] for y in range(int(self.m_sizeX/grid+1))]
 
     def cell_index_x(self,coord):
         return self.cell_index(coord, self.m_sizeX);
@@ -114,6 +124,17 @@ class CBedLevel:
     def get_i_y(self, index):
         return int(index/(self.m_sizeX/self.m_grid+1))
 
+    def mesh_z_value(self,mX, mY):
+        return self.m_ZheighArray[mX][mY]
+
+   #public
+    def init(self,width,depth,grid):
+        # round up
+        self.m_sizeX=int((width+grid)/grid)*grid
+        self.m_sizeY=int((depth+grid)/grid)*grid
+        self.m_grid=grid
+        self.m_ZheighArray = [[float('nan') for x in range(int(self.m_sizeY/grid+1))] for y in range(int(self.m_sizeX/grid+1))]
+
     def set(self, index, z_height):
         self.m_ZheighArray[self.get_i_x(index)][self.get_i_y(index)]=z_height;
 
@@ -121,6 +142,35 @@ class CBedLevel:
         if math.isnan(self.m_sizeX) or math.isnan(self.m_sizeY) or math.isnan(self.m_grid):
             return -1
         return int((self.m_sizeX/self.m_grid+1)*(self.m_sizeY/self.m_grid+1))
+
+    def get_z_correction(self, rx0, ry0, offset_x=None, offset_y=None):
+        if offset_x:
+            rx0+=offset_x
+        if offset_y:
+            ry0+=offset_y
+
+        if  self.m_sizeX < rx0 or self.m_sizeY < ry0:
+            return float('nan')
+
+        cx = self.cell_index(rx0, self.m_sizeX);
+        cy = self.cell_index(ry0, self.m_sizeY);
+
+        mx = cx * self.m_grid;
+        my = cy * self.m_grid;
+
+        if (mx == rx0 and my == ry0):
+            #in dot
+            return self.mesh_z_value(cx, cy);
+        if (mx == rx0):
+            #in line X
+            return self.calc_z0(ry0, my, self.mesh_z_value(cx, cy), my + self.m_grid, self.mesh_z_value(cx, cy + 1))
+
+        if (my == ry0):
+            #in line Y
+            return self.calc_z0(rx0, mx, self.mesh_z_value(cx, cy),  mx + self.m_grid, self.mesh_z_value(cx + 1, cy))
+        z1 = celf.calc_z0(rx0, mx, self.mesh_z_value(cx, cy), mx + self.m_grid, self.mesh_z_value(cx + 1, cy))
+        z2 = self.calc_z0(rx0, mx, self.mesh_z_value(cx, cy + 1), mx + self.m_grid, self.mesh_z_value(cx + 1, cy + 1))
+        return self.calc_z0(ry0, my, z1, my + self.m_grid, z2)
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -431,3 +481,53 @@ def __plugin_load__():
         "octoprint.comm.protocol.gcode.received":__plugin_implementation__.gcode_received_hook
     }
 
+#test
+def testCB(response):
+    print(response)
+
+def sendGCode(response):
+    print("send :"+response)
+
+if __name__ == '__main__':
+    print("test begin")
+    # test1.py executed as script
+    # do something
+    cmdList=CCmdList(sendGCode)
+    # test.addGCode("G10\n\nF20",testCB)
+    # print(test.cmdList)
+    # test.processResponce("ok")
+    # print(test.cmdList)
+    # test.processResponce("ok")
+    # print(test.cmdList)
+
+    level=CBedLevel()
+    # level.init(10,15,5)
+    # print("sz:"+str(level.get_count()));
+    # print(level.m_ZheighArray)
+    # for i in range(level.get_count()):
+    #   print(i," ",level.get_i_x(i)," ",level.get_i_y(i))
+    #   level.set(i,i)
+    # print(level.m_ZheighArray)
+
+    control=CBedLevelComtrol(cmdList,testCB,level)
+    control.on_file_selected('path','origin')
+    control.on_file_selected('path','origin',dict({u'estimatedPrintTime': 1433.505594528735, u'printingArea': {u'maxZ': 1.9, u'maxX': 185.087, u'maxY': 119.362, u'minX': 14.909, u'minY': 80.628, u'minZ': 0.3}, u'dimensions': {u'width': 170.178, u'depth': 38.733999999999995, u'height': 1.5999999999999999}, u'filament': {u'tool0': {u'volume': 0.0, u'length': 1459.9454600000004}}}))
+    data =dict()
+    control.on_update_front(data)
+    print(data)
+    control._width=30
+    control._depth=10
+    control.start(dict(feed_probe=40,feed_z=300,feed_xy=500,level_delta_z=0.5,grid=10))
+
+    print(level.m_ZheighArray)
+    control.cmdList.processResponce("ok")
+    control.cmdList.processResponce("ok")
+    control.cmdList.processResponce("ok")
+    while True:
+        control.cmdList.processResponce("X:216.00 Y:205.00 Z:0.00 E:0.00 Count A:34560 B:32800 Z:0")
+        control.cmdList.processResponce("ok")
+        if(control._state!="Init" and control._state!="Progress"):
+            break
+    print(level.m_ZheighArray)
+    print(level.get_z_correction(0,0))
+    print("test end")
