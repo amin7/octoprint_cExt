@@ -207,7 +207,7 @@ class CBedLevelComtrol:
         pass
 
     def on_update_front(self,data):
-        data['CBedLevelComtrol']=dict(path=self._path,width=self._width,depth=self._depth)
+        data['CBedLevelComtrol']=dict(state=self._state,path=self._path,width=self._width,depth=self._depth)
         pass
 
     def on_progress(self,state,payload=None):
@@ -249,7 +249,7 @@ class CBedLevelComtrol:
                     self.on_progress("Done",self.bedLevel.m_ZheighArray)
                 return
             pass
-        self.on_error("unproper answer",response)
+        self.on_error("err pos",response)
         pass
 
     def make_probe(self):
@@ -266,6 +266,11 @@ class CBedLevelComtrol:
         pass
 
     def stop(self):
+        if self._state== "Init" or self._state== "Progress":
+            self.cmdList.clearCommandList()
+            self.cmdList.addGCode(["M117 Stop",GCODE_RELATIVEPOSITIONING, GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z)])
+        self._state=''
+        self._report(dict(state=self._state))
         pass
 
     def start(self,data):
@@ -312,7 +317,7 @@ class CProbeComtrol:
                 self._report(dict(state=result))
                 self.cmdList.addGCode("M117 "+result);
                 return
-        self._report(dict(state='unproper answer',response=response))
+        self._report(dict(state='err_pos',response=response))
         pass
 
     def start(self,data):
@@ -387,12 +392,12 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
         )
 
     cmdList=None
-    printer_cfg=None
     probe_area_control=None
     probe=None
+    is_swap_xy=False
+    is_apply_probe_data=False
 
     def on_after_startup(self):
-        self.printer_cfg=self._printer_profile_manager.get_current()
         self._logger.info("PluginA starting up")
         self._logger.info(self._printer_profile_manager.get_current())
         self._logger.info(self._settings)
@@ -443,9 +448,31 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
             self.cmdList.processResponce(line)
         return line
 
+    def gcode_queuing(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):
+        self._logger.info(dict(cmd=cmd,type=cmd_type,gcode=gcode))
+        if self.is_swap_xy:
+            if gcode=="G0" or gcode == "G1" or gcode=="G92":
+                _cmd=""
+                for i in cmd:
+                    if i=='X':
+                        i='Y'
+                    elif i=='Y':
+                        i='X'
+                    _cmd+=i
+                cmd=_cmd
+                pass
+            pass
+
+        if self.is_apply_probe_data:
+            pass
+
+        return cmd
+
     def get_api_commands(self):
         return dict(probe_area=['feed_probe','feed_z','feed_xy','grid','level_delta_z'],
-                    probe=['distanse','feed'])
+                    probe=['distanse','feed'],
+                    probe_area_stop=[],
+                    swap_xy=['active'])
 
     def on_api_command(self, command, data):
         self._logger.info("on_api_command:"+command)
@@ -453,10 +480,16 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
             if self.probe_area_control:
                 self.probe_area_control.start(data)
             pass
+        if(command == 'probe_area_stop'):
+            if self.probe_area_control:
+                self.probe_area_control.stop()
+            pass
         elif(command == 'probe'):
             if self.probe:
                 self.probe.start(data)
             pass
+        elif(command == 'swap_xy'):
+            self.is_swap_xy=(data['active'])
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
@@ -478,7 +511,8 @@ def __plugin_load__():
     global __plugin_hooks__
     __plugin_hooks__ = {
         "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
-        "octoprint.comm.protocol.gcode.received":__plugin_implementation__.gcode_received_hook
+        "octoprint.comm.protocol.gcode.received":__plugin_implementation__.gcode_received_hook,
+        "octoprint.comm.protocol.gcode.queuing": __plugin_implementation__.gcode_queuing
     }
 
 #test

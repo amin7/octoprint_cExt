@@ -20,7 +20,10 @@ $(function() {
       self.grid_area=ko.observable();
 
       self.isOperational = ko.observable();
-      self.file_selected_path=ko.observable();
+      self.swap_xy = ko.observable();
+      self.is_dimention_present = ko.observable(false);
+      self.is_engrave_avaliable = ko.observable(false);
+
       self.file_selected_width=0;
       self.file_selected_depth=0;
       self.cmd_AbsolutePositioning="G90";
@@ -78,13 +81,23 @@ $(function() {
 
         if((typeof data.CBedLevelComtrol)!='undefined'){
           upd=data.CBedLevelComtrol;
+          let file_selected_str=""
+          let state=""
           if((typeof upd.path)!='undefined'){
-            self.file_selected_path(upd.path);
+            file_selected_str+=upd.path;
+          }
+          if(upd.width && upd.depth){
+            self.file_selected_width=upd.width;
+            self.file_selected_depth=upd.depth;
+            if(upd.width && upd.depth){
+              self.is_dimention_present(true)
+            }
+            file_selected_str+=', ('+self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm)";
           }
 
-          let state=""
           if((typeof upd.state)!='undefined'){
             state+=upd.state
+            self.is_engrave_avaliable(upd.state=="Done")
           }
           if((typeof upd.step)!='undefined'){
             state+=" "+ upd.step
@@ -92,13 +105,11 @@ $(function() {
           if((typeof upd.count)!='undefined'){
             state+="/"+ upd.count
           }
-
-          $("#id_cext_state").text(state);
-
-          if(upd.width && upd.depth){
-            self.file_selected_width=upd.width;
-            self.file_selected_depth=upd.depth;
-            $("#id_file_selected_dimmention").text(self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm");
+          if(file_selected_str){
+            $("#id_file_selected").text(file_selected_str)
+          }
+          if(state){
+            $("#id_cext_state").text(state);
           }
         }
       };
@@ -121,6 +132,19 @@ $(function() {
         OctoPrint.control.sendGcode([self.cmd_RelativePositioning,"G0 Z"+distance+" F"+self.printerProfilesViewModel.currentProfileData().axes.z.speed()]);
       }
 
+      self.swap_xy.subscribe(function(is_swap) {
+         $.ajax({
+            url: API_BASEURL + "plugin/cExt",
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify({
+                command: "swap_xy",
+                active: is_swap
+            }),
+            contentType: "application/json; charset=UTF-8"
+        });
+      });
+
       self.probe = function(_distanse,_feed) {
         //console.log(_distanse);
         $.ajax({
@@ -135,6 +159,7 @@ $(function() {
             contentType: "application/json; charset=UTF-8"
         });
       };
+
     self.probe_threshold = function(distanse,feed) {
       let _distanse=parseFloat(distanse);
       _distanse+=parseFloat(self.z_threshold());
@@ -142,7 +167,7 @@ $(function() {
     }
 //-----------------------------------------------------------
     self.engrave=function() {
-      };
+    };
 
     self.probe_area = function() {
      // console.log("probe_area");
@@ -162,6 +187,15 @@ $(function() {
         });
     };
     self.probe_area_stop=function() {
+        $.ajax({
+            url: API_BASEURL + "plugin/cExt",
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify({
+                command: "probe_area_stop"
+            }),
+            contentType: "application/json; charset=UTF-8"
+        });
 
     };
       //rounded to grid
