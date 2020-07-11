@@ -167,6 +167,16 @@ $(function() {
     }
 //-----------------------------------------------------------
     self.engrave=function() {
+           // console.log("probe_area");
+        $.ajax({
+            url: API_BASEURL + "plugin/cExt",
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify({
+                command: "engrave"
+            }),
+            contentType: "application/json; charset=UTF-8"
+        });
     };
 
     self.probe_area = function() {
