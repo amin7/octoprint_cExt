@@ -169,7 +169,7 @@ class CBedLevel:
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
-class CBedLevelComtrol:
+class CBedLevelControl:
 	def __init__(self,cmdList,progress_cb,bedLevel):
 		self.cmdList=cmdList
 		self.bedLevel=bedLevel
@@ -178,7 +178,7 @@ class CBedLevelComtrol:
 		pass
 
 	def _report(self,data):
-		self.progress_cb(dict(CBedLevelComtrol=data))
+		self.progress_cb(dict(CBedLevelControl=data))
 
 	def on_init(self):
 		self._path = None
@@ -197,7 +197,7 @@ class CBedLevelComtrol:
 			self._path = payload['path']
 			if self._file_manager.has_analysis(self._origin, self._path):
 				analysis = self._file_manager.get_metadata(self._origin, self._path)['analysis']
-				cext._logger.info(analysis)
+#				cext._logger.info(analysis)
 				self._width = analysis['dimensions']['width']
 				self._depth = analysis['dimensions']['depth']
 				self._min_x = analysis['printingArea']['minX']
@@ -210,7 +210,7 @@ class CBedLevelComtrol:
 		pass
 
 	def on_update_front(self,data):
-		data['CBedLevelComtrol']=dict(state=self._state,path=self._path, width=self._width, depth=self._depth)
+		data['CBedLevelControl']=dict(state=self._state,path=self._path, width=self._width, depth=self._depth)
 		pass
 
 	def on_progress(self,state,payload=None):
@@ -303,7 +303,7 @@ class CProbeControl:
 		pass
 
 	def _report(self,data):
-		self.progress_cb(dict(CProbeComtrol=data))
+		self.progress_cb(dict(CProbeControl=data))
 
 	def cb_stop_on_error(self,response):
 		for line in response:
@@ -407,15 +407,17 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		self._logger.info(self._settings)
 		self.cmdList = CCmdList(self._printer.commands)
 		self.level=CBedLevel()
-		self.probe_area_control=CBedLevelComtrol(self.cmdList, self.control_progress_cb, self.level, self._file_manager)
-		self.probe=CProbeComtrol(self.cmdList,self.control_progress_cb)
+		self.probe_area_control=CBedLevelControl(self.cmdList, self.control_progress_cb, self.level)
+		self.probe=CProbeControl(self.cmdList,self.control_progress_cb)
+		self._logger.info(self._file_manager)
+		self.probe_area_control._file_manager = self._file_manager
 		pass
 
 	def on_event(self, event, payload):
 		self._logger.info(event)
 		self._logger.info(payload)
 		if self.probe_area_control:
-			self.probe_area_control.on_event(self, event, payload)
+			self.probe_area_control.on_event(event, payload)
 		if(event=='UserLoggedIn'):
 			self._update_front()
 		return
@@ -550,7 +552,7 @@ if __name__ == '__main__':
 	#   level.set(i,i)
 	# print(level.m_ZheighArray)
 
-	control = CBedLevelComtrol(cmdList,testCB,level)
+	control = CBedLevelControl(cmdList,testCB,level)
 	control._file_manager=	TEST_file_manager()
 	control.on_event('FileSelected', dict(origin='origin',path='path'))
 	# control.on_event('path','origin',dict({u'estimatedPrintTime': 1433.505594528735, u'printingArea': {u'maxZ': 1.9, u'maxX': 185.087, u'maxY': 119.362, u'minX': 14.909, u'minY': 80.628, u'minZ': 0.3}, u'dimensions': {u'width': 170.178, u'depth': 38.733999999999995, u'height': 1.5999999999999999}, u'filament': {u'tool0': {u'volume': 0.0, u'length': 1459.9454600000004}}}))

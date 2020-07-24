@@ -72,15 +72,15 @@ $(function() {
         }
         console.log(data);
 
-        if((typeof data.CProbeComtrol)!='undefined'){
-          upd=data.CProbeComtrol;
+        if((typeof data.CProbeControl)!='undefined'){
+          upd=data.CProbeControl;
           if((typeof upd.state)!='undefined'){
             $("#id_probe_state").text(upd.state);
           }
         }
 
-        if((typeof data.CBedLevelComtrol)!='undefined'){
-          upd=data.CBedLevelComtrol;
+        if((typeof data.CBedLevelControl)!='undefined'){
+          upd=data.CBedLevelControl;
           let file_selected_str=""
           let state=""
           if((typeof upd.path)!='undefined'){
@@ -167,7 +167,7 @@ $(function() {
     }
 //-----------------------------------------------------------
     self.engrave=function() {
-           // console.log("probe_area");
+      //  console.log((new Error().stack));
         $.ajax({
             url: API_BASEURL + "plugin/cExt",
             type: "POST",

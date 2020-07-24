@@ -7,9 +7,9 @@
     	<div class="w-100"></div> 
     	<span id=id_cext_state></span>
     	<label class="checkbox"><input type="checkbox"data-bind="checked: swap_xy" >swap_xy</label>    	
-    	<button class="btn btn-primary" type="button" data-bind="enable: is_engrave_avaliable, click: engrave()" >Engrave</button>
-    	<button class="btn btn-warning" type="button" data-bind="enable: is_dimention_present, click: probe_area()" >Probe Area</button>
-        <button class="btn btn-secondary btn-block" data-bind="click: probe_area_stop()">Cansel/Stop</button>
+    	<button class="btn btn-primary" type="button" data-bind="enable: is_engrave_avaliable, click: engrave" >Engrave</button>
+    	<button class="btn btn-warning" type="button" data-bind="enable: is_dimention_present, click: probe_area" >Probe Area</button>
+        <button class="btn btn-secondary btn-block" data-bind="click: probe_area_stop">Cansel/Stop</button>
     	<hr>        
         <button class="btn btn-dark btn-block" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPosition000); }">Set (0)</button>
     	<button class="btn btn-primary btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_DisableSteppers); }" >Motors Off</button>
