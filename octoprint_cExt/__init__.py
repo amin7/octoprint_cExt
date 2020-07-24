@@ -381,7 +381,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		# for details.
 		return dict(
 			cExt=dict(
-				displayName="Cext Plugin",
+				displayName="cExt Plugin",
 				displayVersion=self._plugin_version,
 
 				# version check: github repository
@@ -513,6 +513,10 @@ def __plugin_load__():
 		"octoprint.comm.protocol.gcode.queuing": __plugin_implementation__.gcode_queuing
 	}
 
+	#show tabs
+	global __plugin_settings_overlay__
+	__plugin_settings_overlay__ = dict(appearance=dict(components=dict(order=dict(tab=["temperature", "control", "gcodeviewer", "terminal","plugin_cExt"]))))
+
 
 # test
 def testCB(response):
@@ -552,7 +556,7 @@ if __name__ == '__main__':
 	#   level.set(i,i)
 	# print(level.m_ZheighArray)
 
-	control = CBedLevelControl(cmdList,testCB,level)
+	control = CBedLevelControl(cmdList, testCB, level)
 	control._file_manager=	TEST_file_manager()
 	control.on_event('FileSelected', dict(origin='origin',path='path'))
 	# control.on_event('path','origin',dict({u'estimatedPrintTime': 1433.505594528735, u'printingArea': {u'maxZ': 1.9, u'maxX': 185.087, u'maxY': 119.362, u'minX': 14.909, u'minY': 80.628, u'minZ': 0.3}, u'dimensions': {u'width': 170.178, u'depth': 38.733999999999995, u'height': 1.5999999999999999}, u'filament': {u'tool0': {u'volume': 0.0, u'length': 1459.9454600000004}}}))

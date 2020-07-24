@@ -24,6 +24,8 @@ $(function() {
       self.is_dimention_present = ko.observable(false);
       self.is_engrave_avaliable = ko.observable(false);
 
+      self.embed_url = ko.observable();
+
       self.file_selected_width=0;
       self.file_selected_depth=0;
       self.cmd_AbsolutePositioning="G90";
@@ -40,6 +42,7 @@ $(function() {
         self.level_delta_z(self.settingsViewModel.settings.plugins.cExt.level_delta_z());
         self.z_tool_change(self.settingsViewModel.settings.plugins.cExt.z_tool_change());
         self.grid_area(self.settingsViewModel.settings.plugins.cExt.grid_area());
+        self.embed_url(self.settingsViewModel.settings.webcam.streamUrl());
       }
       self.onBeforeBinding = function() {
         self._upd_settings();
@@ -239,7 +242,7 @@ $(function() {
     OCTOPRINT_VIEWMODELS.push({
         construct: CextViewModel,
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
-        dependencies: [ "settingsViewModel", "printerProfilesViewModel" ,"controlViewModel"],
+        dependencies: [ "settingsViewModel", "printerProfilesViewModel"],
         // Elements to bind to, e.g. #settings_plugin_cExt, #tab_plugin_cExt, ...
         elements: ["#side_bar_plugin_cExt","#settings_plugin_cExt_form","#navbar_plugin_cExt","#tab_plugin_cExt"]
     });
