@@ -24,7 +24,7 @@ $(function() {
       self.is_dimention_present = ko.observable(false);
       self.is_engrave_avaliable = ko.observable(false);
 
-      self.embed_url = ko.observable();
+      self.embed_url = ko.observable('');
 
       self.file_selected_width=0;
       self.file_selected_depth=0;
@@ -42,7 +42,6 @@ $(function() {
         self.level_delta_z(self.settingsViewModel.settings.plugins.cExt.level_delta_z());
         self.z_tool_change(self.settingsViewModel.settings.plugins.cExt.z_tool_change());
         self.grid_area(self.settingsViewModel.settings.plugins.cExt.grid_area());
-        self.embed_url(self.settingsViewModel.settings.webcam.streamUrl());
       }
       self.onBeforeBinding = function() {
         self._upd_settings();
@@ -116,6 +115,15 @@ $(function() {
           }
         }
       };
+
+      self.onTabChange = function(next, current) {
+        //console.log(next,current);
+        if(next == '#tab_plugin_cExt'){
+            self.embed_url(self.settingsViewModel.settings.webcam.streamUrl());
+        } else {
+            self.embed_url('');
+        }
+      }
 //---------------------------------------------------------
           // assign the injected parameters, e.g.:
           // self.loginStateViewModel = parameters[0];

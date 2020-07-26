@@ -14,6 +14,7 @@ import re
 import math
 from collections import deque
 #-------------- const
+GCODE_AUTO_HOME = 'G28'
 GCODE_ABSOLUTE_POSITIONING ='G90'
 GCODE_RELATIVEPOSITIONING ='G91'
 GCODE_PROBE_UP="G38.4 F{feed} Z{dist}"
@@ -293,6 +294,7 @@ class CBedLevelControl:
 		pass
 	def engrave(self):
 		pass
+	pass
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -332,6 +334,82 @@ class CProbeControl:
 		#show pos
 		self.cmdList.addGCode("M114",self.cb_echo)
 		pass
+	pass
+#--------------------------------------------------------------
+class CPoint:
+	_x=0
+	_y=0
+	_z=0
+	_isRelative=False
+
+	def _gcode(self, gcode):
+		gcode=gcode.split(";")[0]# remove comment
+		_cmd = re.search("((^.\d+\.\d+)|(^.\d+))",gcode)
+		_valX = re.search("X((\d+\.\d+)|(\d+))",gcode)
+		_valY = re.search("Y((\d+\.\d+)|(\d+))", gcode)
+		_valZ = re.search("Z((\d+\.\d+)|(\d+))", gcode)
+		if _cmd:
+			cmd=_cmd.group()
+		if _valX:
+			valX = _valX.group(1)
+		if _valY:
+			valY = _valY.group(1)
+		if _valZ:
+			valZ = _valZ.group(1)
+
+		if cmd == GCODE_ABSOLUTE_POSITIONING:
+			self._isRelative = False
+			pass
+		elif cmd == GCODE_RELATIVEPOSITIONING:
+			self._isRelative = True
+			pass
+		elif cmd == GCODE_AUTO_HOME:
+			self._x = 0
+			self._y = 0
+			self._z = 0
+			pass
+		elif cmd == "G0" or cmd == "G1":
+			if self._isRelative:
+				if valX:
+					self._x+=valX
+					pass
+				if valY:
+					self._y+=valY
+					pass
+				if valZ:
+					self._z+=valZ
+					pass
+				pass
+			else:
+				if valX:
+					self._x=valX
+					pass
+				if valY:
+					self._y=valY
+					pass
+				if valZ:
+					self._z=valZ
+					pass
+				pass
+			pass
+		pass
+
+	def gcode(self,_gcode):
+		if isinstance(_gcode, list):
+			for line in _gcode:
+				self._gcode(line)
+			pass
+		else:
+			self._gcode(_gcode)
+			pass
+		pass
+
+	def toStr(self):
+		return "pos({x},{y},{z}), relative={relative}".format(x=self._x,y=self._y,z=self._z,relative=self._isRelative)
+	pass
+
+
+
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 class CextPlugin(octoprint.plugin.SettingsPlugin,
@@ -535,7 +613,16 @@ class TEST_file_manager:
 		return dict(analysis=_analysis)
 	pass
 
+
+
 if __name__ == '__main__':
+	from inspect import getframeinfo, stack
+	def test_isEQ(v1, v2):
+		if v1!=v2:
+			caller = getframeinfo(stack()[1][0])
+			print "{file}:{line} Erroe {v1}!={v2}".format (file=caller.filename, line=caller.lineno,v1=v1,v2=v2)
+			pass
+		pass
 	print("test begin")
 	# test1.py executed as script
 	# do something
@@ -556,26 +643,40 @@ if __name__ == '__main__':
 	#   level.set(i,i)
 	# print(level.m_ZheighArray)
 
-	control = CBedLevelControl(cmdList, testCB, level)
-	control._file_manager=	TEST_file_manager()
-	control.on_event('FileSelected', dict(origin='origin',path='path'))
-	# control.on_event('path','origin',dict({u'estimatedPrintTime': 1433.505594528735, u'printingArea': {u'maxZ': 1.9, u'maxX': 185.087, u'maxY': 119.362, u'minX': 14.909, u'minY': 80.628, u'minZ': 0.3}, u'dimensions': {u'width': 170.178, u'depth': 38.733999999999995, u'height': 1.5999999999999999}, u'filament': {u'tool0': {u'volume': 0.0, u'length': 1459.9454600000004}}}))
-	data =dict()
-	control.on_update_front(data)
-	print(data)
-	control._width=30
-	control._depth=10
-	control.start(dict(feed_probe=40,feed_z=300,feed_xy=500,level_delta_z=0.5,grid=10))
+	# control = CBedLevelControl(cmdList, testCB, level)
+	# control._file_manager=	TEST_file_manager()
+	# control.on_event('FileSelected', dict(origin='origin',path='path'))
+	# # control.on_event('path','origin',dict({u'estimatedPrintTime': 1433.505594528735, u'printingArea': {u'maxZ': 1.9, u'maxX': 185.087, u'maxY': 119.362, u'minX': 14.909, u'minY': 80.628, u'minZ': 0.3}, u'dimensions': {u'width': 170.178, u'depth': 38.733999999999995, u'height': 1.5999999999999999}, u'filament': {u'tool0': {u'volume': 0.0, u'length': 1459.9454600000004}}}))
+	# data =dict()
+	# control.on_update_front(data)
+	# print(data)
+	# control._width=30
+	# control._depth=10
+	# control.start(dict(feed_probe=40,feed_z=300,feed_xy=500,level_delta_z=0.5,grid=10))
+	#
+	# print(level.m_ZheighArray)
+	# control.cmdList.processResponce("ok")
+	# control.cmdList.processResponce("ok")
+	# control.cmdList.processResponce("ok")
+	# while True:
+	# 	control.cmdList.processResponce("X:216.00 Y:205.00 Z:0.00 E:0.00 Count A:34560 B:32800 Z:0")
+	# 	control.cmdList.processResponce("ok")
+	# 	if(control._state!="Init" and control._state!="Progress"):
+	# 		break
+	# print(level.m_ZheighArray)
+	# print(level.get_z_correction(0,0))
 
-	print(level.m_ZheighArray)
-	control.cmdList.processResponce("ok")
-	control.cmdList.processResponce("ok")
-	control.cmdList.processResponce("ok")
-	while True:
-		control.cmdList.processResponce("X:216.00 Y:205.00 Z:0.00 E:0.00 Count A:34560 B:32800 Z:0")
-		control.cmdList.processResponce("ok")
-		if(control._state!="Init" and control._state!="Progress"):
-			break
-	print(level.m_ZheighArray)
-	print(level.get_z_correction(0,0))
+	point= CPoint();
+	test_isEQ(point._isRelative,False)
+	point.gcode("G91")
+	point.gcode("G38.2")
+	test_isEQ(point._isRelative,True)
+	point.gcode("G90")
+	test_isEQ(point._isRelative,False)
+	point.gcode("G1 X10")
+	test_isEQ(point._x,10)
+	print(point.toStr())
+	point.gcode("G0 Y10.1")
+	point.gcode("G0 X1 Y100.1 Z200.2 F300")
+
 	print("test end")
