@@ -85,19 +85,29 @@ class CCmdList:
 #  *   a1            a0        a2
 #  *    |<---delta_a---------->|
 #  *
-#  *  calc_z0 is the basis for all the Mesh Based correction. It is used to
+#  *  __calc_z0 is the basis for all the Mesh Based correction. It is used to
 #  *  find the expected Z Height at a position between two known Z-Height locations.
 #  *
 #  *  It is fairly expensive with its 4 floating point additions and 2 floating point
 #  *  multiplications.
 
 class CBedLevel:
-	m_sizeX=float('nan')
-	m_sizeY=float('nan')
-	m_grid=float('nan')
-	m_ZheighArray=None
+	def __init__(self, width, depth, grid):
+		# round up
+		self.m_sizeX = int(width / grid) * grid
+		self.m_sizeY = int(depth / grid) * grid
+		# round up
+		if width % grid:
+			self.m_sizeX += grid
+			pass
+		if depth % grid:
+			self.m_sizeY += grid
+			pass
+		self.m_grid = grid
+		self.m_ZheighArray = [[None for x in range(int(self.m_sizeY/grid+1))] for y in range(int(self.m_sizeX/grid+1))]
+
 	#protected
-	def calc_z0(a0, a1, z1, a2, z2):
+	def __calc_z0(a0, a1, z1, a2, z2):
 		return z1 + (z2 - z1) * (a0 - a1) / (a2 - a1)
 
 	def cell_index(self,coord,max):
@@ -128,12 +138,6 @@ class CBedLevel:
 		return self.m_ZheighArray[mX][mY]
 
    #public
-	def init(self,width,depth,grid):
-		# round up
-		self.m_sizeX=int((width+grid)/grid)*grid
-		self.m_sizeY=int((depth+grid)/grid)*grid
-		self.m_grid=grid
-		self.m_ZheighArray = [[float('nan') for x in range(int(self.m_sizeY/grid+1))] for y in range(int(self.m_sizeX/grid+1))]
 
 	def set(self, index, z_height):
 		self.m_ZheighArray[self.get_i_x(index)][self.get_i_y(index)]=z_height;
@@ -144,29 +148,28 @@ class CBedLevel:
 		return int((self.m_sizeX/self.m_grid+1)*(self.m_sizeY/self.m_grid+1))
 
 	def get_z_correction(self, rx0, ry0):
+		if self.m_sizeX < rx0 or self.m_sizeY < ry0:
+			return None
 
-		if  self.m_sizeX < rx0 or self.m_sizeY < ry0:
-			return float('nan')
+		cx = self.cell_index(rx0, self.m_sizeX)
+		cy = self.cell_index(ry0, self.m_sizeY)
 
-		cx = self.cell_index(rx0, self.m_sizeX);
-		cy = self.cell_index(ry0, self.m_sizeY);
-
-		mx = cx * self.m_grid;
-		my = cy * self.m_grid;
+		mx = cx * self.m_grid
+		my = cy * self.m_grid
 
 		if (mx == rx0 and my == ry0):
 			#in dot
 			return self.mesh_z_value(cx, cy);
 		if (mx == rx0):
 			#in line X
-			return self.calc_z0(ry0, my, self.mesh_z_value(cx, cy), my + self.m_grid, self.mesh_z_value(cx, cy + 1))
+			return self.__calc_z0(ry0, my, self.mesh_z_value(cx, cy), my + self.m_grid, self.mesh_z_value(cx, cy + 1))
 
 		if (my == ry0):
 			#in line Y
-			return self.calc_z0(rx0, mx, self.mesh_z_value(cx, cy),  mx + self.m_grid, self.mesh_z_value(cx + 1, cy))
-		z1 = celf.calc_z0(rx0, mx, self.mesh_z_value(cx, cy), mx + self.m_grid, self.mesh_z_value(cx + 1, cy))
-		z2 = self.calc_z0(rx0, mx, self.mesh_z_value(cx, cy + 1), mx + self.m_grid, self.mesh_z_value(cx + 1, cy + 1))
-		return self.calc_z0(ry0, my, z1, my + self.m_grid, z2)
+			return self.__calc_z0(rx0, mx, self.mesh_z_value(cx, cy),  mx + self.m_grid, self.mesh_z_value(cx + 1, cy))
+		z1 = self.__calc_z0(rx0, mx, self.mesh_z_value(cx, cy), mx + self.m_grid, self.mesh_z_value(cx + 1, cy))
+		z2 = self.__calc_z0(rx0, mx, self.mesh_z_value(cx, cy + 1), mx + self.m_grid, self.mesh_z_value(cx + 1, cy + 1))
+		return self.__calc_z0(ry0, my, z1, my + self.m_grid, z2)
 
 #--------------------------------------------------------------
 #--------------------------------------------------------------
@@ -175,47 +178,17 @@ class CBedLevelControl:
 		self.cmdList=cmdList
 		self.bedLevel=bedLevel
 		self.progress_cb=progress_cb
-		self.on_init()
 		pass
 
 	def _report(self,data):
 		self.progress_cb(dict(CBedLevelControl=data))
-
-	def on_init(self):
-		self._path = None
-		self._origin = None
-		self._width = None
-		self._depth = None
-		self._min_x = None
-		self._min_y = None
-		self.probe_area_step = None
-		self._state = None
-		pass
-
-	def on_event(self, event, payload):
-		if (event == 'FileSelected'):
-			self._origin = payload['origin']
-			self._path = payload['path']
-			if self._file_manager.has_analysis(self._origin, self._path):
-				analysis = self._file_manager.get_metadata(self._origin, self._path)['analysis']
-#				cext._logger.info(analysis)
-				self._width = analysis['dimensions']['width']
-				self._depth = analysis['dimensions']['depth']
-				self._min_x = analysis['printingArea']['minX']
-				self._min_y = analysis['printingArea']['minY']
-				pass
-			data=dict()
-			self.on_update_front(data)
-			self.progress_cb(data)
-			pass
-		pass
 
 	def on_update_front(self,data):
 		data['CBedLevelControl']=dict(state=self._state,path=self._path, width=self._width, depth=self._depth)
 		pass
 
 	def on_progress(self,state,payload=None):
-		self._state=state
+		self._state = state
 		self._report(dict(step=self.probe_area_step,count=self.bedLevel.get_count(),state=self._state,payload=payload))
 		self.cmdList.addGCode("M117 {state}: {step}/{count} ".format(state=self._state,step=self.probe_area_step,count=self.bedLevel.get_count()));
 		pass
@@ -241,7 +214,7 @@ class CBedLevelControl:
 			if(match):
 				zpos=0
 				if(self.probe_area_step):
-					zpos=match.group('val_z');
+					zpos = match.group('val_z')
 				else:
 					self.cmdList.addGCode(GCODE_SET_POS_00Z.format(pos_z=self.level_delta_z))#aftre probe heigh
 				self.bedLevel.set(self.probe_area_step,zpos);
@@ -277,21 +250,18 @@ class CBedLevelControl:
 		self._report(dict(state=self._state))
 		pass
 
-	def start(self,data):
-		if self._width == None or self._depth == None:
-			self.on_progress("not inited")
-			return
+	def start(self, data):
 		self.probe_area_step=0
 		self.feed_probe=data['feed_probe']
 		self.feed_z=data['feed_z']
 		self.feed_xy=data['feed_xy']
 		self.level_delta_z=data['level_delta_z']
-		self.bedLevel.init(self._width,self._depth,data['grid'])
 		self.on_progress("Init")
 		#preinit
 		self.cmdList.addGCode([GCODE_SET_POS_000,GCODE_RELATIVEPOSITIONING,GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z), GCODE_MOVE_XY.format(feed=self.feed_xy,pos_x=1,pos_y=1)])
 		self.make_probe()
 		pass
+
 	def engrave(self):
 		pass
 	pass
@@ -299,9 +269,16 @@ class CBedLevelControl:
 #--------------------------------------------------------------
 #--------------------------------------------------------------
 class CProbeControl:
-	def __init__(self,cmdList,progress_cb):
+	def __init__(self,cmdList,progress_cb, data):
 		self.cmdList=cmdList
 		self.progress_cb=progress_cb
+		self._report(dict(state = 'probing'))
+		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING)
+		# fast probe
+		self.cmdList.addGCode(GCODE_PROBE_DOWN.format(feed=data["feed"], dist=-1 * data["distanse"]),
+							  self.cb_stop_on_error)
+		# show pos
+		self.cmdList.addGCode("M114", self.cb_echo)
 		pass
 
 	def _report(self,data):
@@ -325,89 +302,85 @@ class CProbeControl:
 				return
 		self._report(dict(state='err_pos',response=response))
 		pass
-
-	def start(self,data):
-		self._report(dict(state='probing'))
-		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING)
-		#fast probe
-		self.cmdList.addGCode(GCODE_PROBE_DOWN.format(feed=data["feed"],dist=-1*data["distanse"]),self.cb_stop_on_error)
-		#show pos
-		self.cmdList.addGCode("M114",self.cb_echo)
-		pass
 	pass
 #--------------------------------------------------------------
-class CPoint:
-	_x=0
-	_y=0
-	_z=0
-	_isRelative=False
+def parse_gcode(gcode):
+	gcode = gcode.split(";")[0]  # remove comment
+	_cmd = re.search("((^.\d+\.\d+)|(^.\d+))", gcode)
+	if not _cmd:
+		return None
+	parsed = dict(cmd=_cmd.group())
 
-	def _gcode(self, gcode):
-		gcode=gcode.split(";")[0]# remove comment
-		_cmd = re.search("((^.\d+\.\d+)|(^.\d+))",gcode)
-		_valX = re.search("X((\d+\.\d+)|(\d+))",gcode)
-		_valY = re.search("Y((\d+\.\d+)|(\d+))", gcode)
-		_valZ = re.search("Z((\d+\.\d+)|(\d+))", gcode)
-		if _cmd:
-			cmd=_cmd.group()
-		if _valX:
-			valX = _valX.group(1)
-		if _valY:
-			valY = _valY.group(1)
-		if _valZ:
-			valZ = _valZ.group(1)
+	_valX = re.search("X((\d+\.\d+)|(\d+))", gcode)
+	_valY = re.search("Y((\d+\.\d+)|(\d+))", gcode)
+	_valZ = re.search("Z((\d+\.\d+)|(\d+))", gcode)
+	_valF = re.search("F((\d+\.\d+)|(\d+))", gcode)
 
-		if cmd == GCODE_ABSOLUTE_POSITIONING:
-			self._isRelative = False
-			pass
-		elif cmd == GCODE_RELATIVEPOSITIONING:
-			self._isRelative = True
-			pass
-		elif cmd == GCODE_AUTO_HOME:
-			self._x = 0
-			self._y = 0
-			self._z = 0
-			pass
-		elif cmd == "G0" or cmd == "G1":
-			if self._isRelative:
-				if valX:
-					self._x+=valX
-					pass
-				if valY:
-					self._y+=valY
-					pass
-				if valZ:
-					self._z+=valZ
-					pass
-				pass
-			else:
-				if valX:
-					self._x=valX
-					pass
-				if valY:
-					self._y=valY
-					pass
-				if valZ:
-					self._z=valZ
-					pass
-				pass
-			pass
+	if _valX:
+		parsed['X'] = float(_valX.group(1))
+	if _valY:
+		parsed['Y'] = float(_valY.group(1))
+	if _valZ:
+		parsed['Z'] = float(_valZ.group(1))
+	if _valF:
+		parsed['F'] = float(_valF.group(1))
+	return parsed
+
+def dict2gcode(_dict):
+	if "cmd" not in _dict:
+		return None
+	gcode= _dict['cmd']
+	for key in _dict.keys():
+		if key != "cmd":
+			gcode+= " {key}{val}".format(key=key,val=_dict[key])
+	return gcode
+
+class CSwapXY:
+	def run(self,cmd):
+		if gcode.startswith("G0") or gcode.startswith("G1") or gcode.startswith("G92"):
+			_cmd = ""
+			for i in cmd:
+				if i == 'X':
+					i = 'Y'
+				elif i == 'Y':
+					i = 'X'
+				_cmd += i
+			return _cmd
 		pass
-
-	def gcode(self,_gcode):
-		if isinstance(_gcode, list):
-			for line in _gcode:
-				self._gcode(line)
-			pass
-		else:
-			self._gcode(_gcode)
-			pass
-		pass
-
-	def toStr(self):
-		return "pos({x},{y},{z}), relative={relative}".format(x=self._x,y=self._y,z=self._z,relative=self._isRelative)
 	pass
 
+class CEngrave:
+	def __init__(self, bedLevel, offs_X, offs_Y):
+		self._cur_X = 0
+		self._cur_Y = 0
+		self._cur_Z = 0
+		self._offs_X = offs_X
+		self._offs_Y = offs_Y
+		self._bed_level = bedLevel
+		pass
+
+	def run(self, cmd):
+		g_parsed = parse_gcode(cmd)
+		if g_parsed["cmd"] == "G0" or g_parsed["cmd"] == "G1":
+			_cmd_modified=[]
+			if "X" in g_parsed:
+				g_parsed["X"] += self._offs_X
+				pass
+			if "Y" in g_parsed:
+				g_parsed["Y"] += self._offs_Y
+				pass
+
+			if "X" not in g_parsed and "Y" not in g_parsed:
+				#Zmove only
+				cor_Z = self._bed_level.get_z_correction(self._cur_X, self._cur_Y)
+				if cor_Z == None:
+					return None
+				if "Z" in g_parsed:
+					pass
+				pass
+			pass
+		return cmd
+	pass
 
 
 #--------------------------------------------------------------
@@ -473,36 +446,45 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			)
 		)
 
-	cmdList=None
-	probe_area_control=None
-	probe=None
-	is_swap_xy=False
-	is_apply_probe_data=False
+	cmdList = None
+	bed_level = None
+	probe_area_control = None
+	probe = None
+	swap_xy = None
+	engrave = None
+	file_selected = None
 
 	def on_after_startup(self):
 		self._logger.info("PluginA starting up")
 		self._logger.info(self._printer_profile_manager.get_current())
 		self._logger.info(self._settings)
 		self.cmdList = CCmdList(self._printer.commands)
-		self.level=CBedLevel()
-		self.probe_area_control=CBedLevelControl(self.cmdList, self.control_progress_cb, self.level)
-		self.probe=CProbeControl(self.cmdList,self.control_progress_cb)
 		self._logger.info(self._file_manager)
-		self.probe_area_control._file_manager = self._file_manager
 		pass
 
 	def on_event(self, event, payload):
 		self._logger.info(event)
 		self._logger.info(payload)
-		if self.probe_area_control:
-			self.probe_area_control.on_event(event, payload)
+		# if self.probe_area_control:
+		# 	self.probe_area_control.on_event(event, payload)
 		if(event=='UserLoggedIn'):
 			self._update_front()
-		return
+			pass
+		elif(event == 'FileSelected'):
+			self.bed_level = None
+			if self._file_manager.has_analysis(payload['origin'], payload['path']):
+				analysis = self._file_manager.get_metadata(self._origin, self._path)['analysis']
+				cext._logger.info(analysis)
+				self.file_selected = dict(origin=payload['origin'], path=payload['path'],
+									width = analysis['dimensions']['width'], depth = analysis['dimensions']['depth'],
+									min_x = analysis['printingArea']['minX'], min_y = analysis['printingArea']['minY'])
+				pass
+			self._update_front()
+			pass
 		pass
 
 	def _update_front(self):
-		data=dict()
+		data = dict(file_selected = self.file_selected)
 		if self.probe_area_control:
 			self.probe_area_control.on_update_front(data)
 		self._plugin_manager.send_plugin_message(self._identifier, data)
@@ -524,48 +506,48 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def gcode_queuing(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):
 		self._logger.info(dict(cmd=cmd,type=cmd_type,gcode=gcode))
-		if self.is_swap_xy:
-			if gcode=="G0" or gcode == "G1" or gcode=="G92":
-				_cmd=""
-				for i in cmd:
-					if i=='X':
-						i='Y'
-					elif i=='Y':
-						i='X'
-					_cmd+=i
-				cmd=_cmd
-				pass
+		if self.swap_xy:
+			cmd = self.swap_xy.run(cmd)
 			pass
-
-		if self.is_apply_probe_data:
+		if self.engrave:
+			cmd = self.engrave.run(cmd)
 			pass
-
 		return cmd
 
 	def get_api_commands(self):
-		return dict(probe_area=['feed_probe','feed_z','feed_xy','grid','level_delta_z'],
-					probe=['distanse','feed'],
+		return dict(probe_area=['feed_probe', 'feed_z', 'feed_xy', 'grid', 'level_delta_z'],
+					probe=['distanse', 'feed'],
 					probe_area_stop=[],
 					swap_xy=['active'])
 
 	def on_api_command(self, command, data):
 		self._logger.info("on_api_command:"+command)
 		if(command == 'probe_area'):
-			if self.probe_area_control:
+			if self.file_selected:
+				self.bed_level = CBedLevel(self.file_selected['width'], self.file_selected['depth'], data['grid'])
+				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self.level)
 				self.probe_area_control.start(data)
 			pass
 		if(command == 'probe_area_stop'):
 			if self.probe_area_control:
 				self.probe_area_control.stop()
+				self.bed_level=None
 			pass
 		elif(command == 'probe'):
-			if self.probe:
-				self.probe.start(data)
+			self.probe = CProbeControl(self.cmdList, self.control_progress_cb,data)
 			pass
 		elif(command == 'swap_xy'):
-			self.is_swap_xy=(data['active'])
+			if data['active']:
+				self.swap_xy = CSwapXY()
+			else:
+				self.swap_xy = None
+			pass
 		elif(command == 'engrave'):
-			self.eng
+			if self.bed_level:
+				self.engrave = CEngrave(self.level, self.file_selected['minX'], self.file_selected['minY'])
+			else:
+				self._logger.info("no level inited")
+			pass
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
@@ -597,8 +579,7 @@ def __plugin_load__():
 
 
 # test
-def testCB(response):
-	print(response)
+
 
 def sendGCode(response):
 	print("send :" + response)
@@ -613,8 +594,6 @@ class TEST_file_manager:
 		return dict(analysis=_analysis)
 	pass
 
-
-
 if __name__ == '__main__':
 	from inspect import getframeinfo, stack
 	def test_isEQ(v1, v2):
@@ -622,6 +601,13 @@ if __name__ == '__main__':
 			caller = getframeinfo(stack()[1][0])
 			print "{file}:{line} Erroe {v1}!={v2}".format (file=caller.filename, line=caller.lineno,v1=v1,v2=v2)
 			pass
+		pass
+	def test_line(msg = None):
+		caller = getframeinfo(stack()[1][0])
+		print "{file}:{line} {msg}".format (file=caller.filename, line=caller.lineno, msg=msg)
+		pass
+	def testCB(response):
+		print(response)
 		pass
 	print("test begin")
 	# test1.py executed as script
@@ -633,15 +619,23 @@ if __name__ == '__main__':
 	# print(test.cmdList)
 	# test.processResponce("ok")
 	# print(test.cmdList)
-
-	level=CBedLevel()
-	# level.init(10,15,5)
-	# print("sz:"+str(level.get_count()));
-	# print(level.m_ZheighArray)
-	# for i in range(level.get_count()):
-	#   print(i," ",level.get_i_x(i)," ",level.get_i_y(i))
-	#   level.set(i,i)
-	# print(level.m_ZheighArray)
+	test_line()
+	probe_control = CProbeControl(cmdList, testCB, dict(feed=100, distanse=5))
+	test_line()
+	level = CBedLevel(9, 15, 5)
+	test_isEQ(level.get_count(), 12)
+	level = CBedLevel(10, 11, 5)
+	test_isEQ(level.get_count(), 12)
+	level = CBedLevel(10, 15, 5)
+	test_isEQ(level.get_count(), 12)
+	print(level.m_ZheighArray)
+	for i in range(level.get_count()):
+		print(i," ",level.get_i_x(i)," ",level.get_i_y(i))
+		level.set(i,i)
+	print(level.m_ZheighArray)
+	test_line()
+	bed_level_control = CBedLevelControl(cmdList, testCB, level)
+	test_line()
 
 	# control = CBedLevelControl(cmdList, testCB, level)
 	# control._file_manager=	TEST_file_manager()
@@ -652,7 +646,7 @@ if __name__ == '__main__':
 	# print(data)
 	# control._width=30
 	# control._depth=10
-	# control.start(dict(feed_probe=40,feed_z=300,feed_xy=500,level_delta_z=0.5,grid=10))
+	bed_level_control.start(dict(feed_probe=40,feed_z=300,feed_xy=500,level_delta_z=0.5,grid=10))
 	#
 	# print(level.m_ZheighArray)
 	# control.cmdList.processResponce("ok")
@@ -665,18 +659,27 @@ if __name__ == '__main__':
 	# 		break
 	# print(level.m_ZheighArray)
 	# print(level.get_z_correction(0,0))
+	test_line()
+	gc=parse_gcode("G1.1")
+	test_isEQ(gc['cmd'], "G1.1")
+	gc=parse_gcode("G11")
+	test_isEQ(gc['cmd'], "G11")
 
-	point= CPoint();
-	test_isEQ(point._isRelative,False)
-	point.gcode("G91")
-	point.gcode("G38.2")
-	test_isEQ(point._isRelative,True)
-	point.gcode("G90")
-	test_isEQ(point._isRelative,False)
-	point.gcode("G1 X10")
-	test_isEQ(point._x,10)
-	print(point.toStr())
-	point.gcode("G0 Y10.1")
-	point.gcode("G0 X1 Y100.1 Z200.2 F300")
+	gc = parse_gcode("G11 X10; X20")
+	test_isEQ(gc['cmd'], "G11")
+	test_isEQ(gc['X'], 10)
 
-	print("test end")
+	gc=parse_gcode("G13 X1 Y10.2 Z23 F500")
+	test_isEQ(gc['cmd'], "G13")
+	test_isEQ(gc['X'], 1)
+	test_isEQ(gc['Y'], 10.2)
+	test_isEQ(gc['Z'], 23)
+	test_isEQ(gc['F'], 500)
+
+	test_isEQ(dict2gcode(gc),"G13 X1 Y10.2 Z23 F500")
+
+	test_line()
+	engrave = CEngrave(level, 10, 10)
+	res =engrave.run("G1 Z1")
+	print(res)
+	print("test end ")
