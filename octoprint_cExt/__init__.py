@@ -94,33 +94,28 @@ class CCmdList:
 class CBedLevel:
 	def __init__(self, width, depth, grid):
 		# round up
-		self.m_sizeX = math.ceil(float(width) / grid) * grid
-		self.m_sizeY = math.ceil(float(depth) / grid) * grid
-		self.m_grid = grid
+		self.m_sizeX = int(math.ceil(float(width) / grid) * grid)
+		self.m_sizeY = int(math.ceil(float(depth) / grid) * grid)
+		self.m_grid = int(grid)
 		self.m_ZheighArray = [[None for x in range(int(self.m_sizeY/grid+1))] for y in range(int(self.m_sizeX/grid+1))]
 
 	#protected
+	@staticmethod
 	def __calc_z0(a0, a1, z1, a2, z2):
 		return z1 + (z2 - z1) * (a0 - a1) / (a2 - a1)
 
-	def cell_index(self,coord,max):
-		if (coord <= 0):
-			return 0;
-		if (coord >= max):
-			return max / self.m_grid;
-		return coord / self.m_grid;
-
-	def cell_index_x(self,coord):
-		return self.cell_index(coord, self.m_sizeX);
-
-	def cell_index_y(self,coord):
-		return self.cell_index(coord, self.m_sizeY);
+	def __cell_index(self, coord, max_coord):
+		if coord <= 0:
+			return 0
+		if coord >= max_coord:
+			return int(max_coord / self.m_grid)
+		return int(coord / self.m_grid)
 
 	def get_i_x(self, index):
-		maxx=self.m_sizeX/self.m_grid
-		posx=index%(maxx+1)
+		maxx = self.m_sizeX/self.m_grid
+		posx = index%(maxx+1)
 		if self.get_i_y(index)%2:
-			posx=maxx-posx
+			posx = maxx-posx
 			pass
 		return int(posx)
 
@@ -144,8 +139,8 @@ class CBedLevel:
 		if self.m_sizeX < rx0 or self.m_sizeY < ry0:
 			return None
 
-		cx = self.cell_index(rx0, self.m_sizeX)
-		cy = self.cell_index(ry0, self.m_sizeY)
+		cx = self.__cell_index(rx0, self.m_sizeX)
+		cy = self.__cell_index(ry0, self.m_sizeY)
 
 		mx = cx * self.m_grid
 		my = cy * self.m_grid
@@ -352,26 +347,75 @@ class CEngrave:
 		self._bed_level = bedLevel
 		pass
 
+	def __line_z_move(self, g_parsed):
+		# Zmove only
+		x = self._cur_X
+		y = self._cur_Y
+		z = self._cur_Z
+		if "X" in g_parsed:
+			x = g_parsed["X"]
+			pass
+		if "Y" in g_parsed:
+			y = g_parsed["Y"]
+			pass
+		if "Z" in g_parsed:
+			z = g_parsed["Z"]
+			pass
+		cor_z = self._bed_level.get_z_correction(x, y)
+		if cor_z == None:
+			return None
+		self._cur_X = x
+		self._cur_Y = y
+		self._cur_Z = z
+		g_parsed["Z"] = z+ cor_z
+		return dict2gcode(g_parsed)
+
 	def run(self, cmd):
 		g_parsed = parse_gcode(cmd)
 		if g_parsed["cmd"] == "G0" or g_parsed["cmd"] == "G1":
-			_cmd_modified=[]
+			if "X" not in g_parsed and "Y" not in g_parsed:
+				return self.__line_z_move(g_parsed)
+
+			dest_x = self._cur_X
+			dest_y = self._cur_Y
+			dest_z = self._cur_Z
+
+			#add offet for absolute only
 			if "X" in g_parsed:
-				g_parsed["X"] += self._offs_X
+				dest_x= g_parsed["X"] + self._offs_X
 				pass
 			if "Y" in g_parsed:
-				g_parsed["Y"] += self._offs_Y
+				dest_y= g_parsed["Y"] + self._offs_Y
 				pass
 
-			if "X" not in g_parsed and "Y" not in g_parsed:
-				#Zmove only
-				cor_Z = self._bed_level.get_z_correction(self._cur_X, self._cur_Y)
-				if cor_Z == None:
-					return None
-				if "Z" in g_parsed:
-					pass
+			line_len = math.hypot(dest_x - self._cur_X, dest_y - self._cur_Y);
+			if 0 == line_len:# move to same coordinate
+				return self.__line_z_move(g_parsed)
+
+			if "Z" in g_parsed:
+				dest_Z= g_parsed["Z"]
 				pass
-			pass
+
+			step_div = math.ceil(line_len / self._bed_level.m_grid )
+			dx = (dest_x - self._cur_X) / step_div
+			dy = (dest_y - self._cur_Y) / step_div
+			dz = (dest_z - self._cur_Z) / step_div
+			g_parsed["X"] = self._cur_X
+			g_parsed["Y"] = self._cur_Y
+			g_parsed["Z"] = self._cur_Z
+			sublines=[]
+			while line_len> self._bed_level.m_grid:
+				g_parsed["X"] += dx
+				g_parsed["Y"] += dy
+				g_parsed["Z"] += dz
+				line_len -= self._bed_level.m_grid
+				sublines.append(self.__line_z_move(g_parsed))
+				pass
+			g_parsed["X"] = dest_x
+			g_parsed["Y"] = dest_y
+			g_parsed["Z"] = dest_z
+			sublines.append(self.__line_z_move(g_parsed))
+			return sublines
 		return cmd
 	pass
 
@@ -594,7 +638,7 @@ if __name__ == '__main__':
 	def test_isEQ(v1, v2):
 		if v1!=v2:
 			caller = getframeinfo(stack()[1][0])
-			print "{file}:{line} Erroe {v1} != {v2}".format (file=caller.filename, line=caller.lineno,v1=v1,v2=v2)
+			print "{file}:{line} ERROR {v1} != {v2}".format (file=caller.filename, line=caller.lineno,v1=v1,v2=v2)
 			pass
 		pass
 	def test_line(msg = None):
@@ -625,8 +669,8 @@ if __name__ == '__main__':
 	test_isEQ(level.get_count(), 12)
 	print(level.m_ZheighArray)
 	for i in range(level.get_count()):
-		print(i," ",level.get_i_x(i)," ",level.get_i_y(i))
-		level.set(i,i)
+		print(i, " ", level.get_i_x(i), " ", level.get_i_y(i))
+		level.set(i, i)
 	print(level.m_ZheighArray)
 	test_line()
 	bed_level_control = CBedLevelControl(cmdList, testCB, level)
@@ -671,10 +715,11 @@ if __name__ == '__main__':
 	test_isEQ(gc['Z'], 23)
 	test_isEQ(gc['F'], 500)
 
-	test_isEQ(dict2gcode(gc),"G13 X1 Y10.2 Z23 F500")
+	test_isEQ(dict2gcode(gc), "G13 Y10.2 X1.0 Z23.0 F500.0")
 
 	test_line()
-	engrave = CEngrave(level, 10, 10)
-	res =engrave.run("G1 Z1")
-	print(res)
+	engrave = CEngrave(level, 0, 0)
+	test_isEQ(engrave.run("G1 X0 Y0"), "G1 Y0.0 X0.0 Z0")
+	test_isEQ(engrave.run("G1 X5 Y5"), ['G1 Y2.5 X2.5 Z2.5', 'G1 Y5.0 X5.0 Z4'])
+	test_isEQ(engrave.run("G1 Z1"), "G1 Z5.0")
 	print("test end ")
