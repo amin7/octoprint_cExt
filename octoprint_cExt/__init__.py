@@ -94,15 +94,8 @@ class CCmdList:
 class CBedLevel:
 	def __init__(self, width, depth, grid):
 		# round up
-		self.m_sizeX = int(width / grid) * grid
-		self.m_sizeY = int(depth / grid) * grid
-		# round up
-		if width % grid:
-			self.m_sizeX += grid
-			pass
-		if depth % grid:
-			self.m_sizeY += grid
-			pass
+		self.m_sizeX = math.ceil(float(width) / grid) * grid
+		self.m_sizeY = math.ceil(float(depth) / grid) * grid
 		self.m_grid = grid
 		self.m_ZheighArray = [[None for x in range(int(self.m_sizeY/grid+1))] for y in range(int(self.m_sizeX/grid+1))]
 
@@ -180,16 +173,16 @@ class CBedLevelControl:
 		self.progress_cb=progress_cb
 		pass
 
-	def _report(self,data):
+	def _report(self, data):
 		self.progress_cb(dict(CBedLevelControl=data))
 
-	def on_update_front(self,data):
-		data['CBedLevelControl']=dict(state=self._state,path=self._path, width=self._width, depth=self._depth)
+	def on_update_front(self, data):
+		data['CBedLevelControl'] = dict(step=self.probe_area_step, count=self.bedLevel.get_count(), state=self._state)
 		pass
 
-	def on_progress(self,state,payload=None):
+	def on_progress(self, state, payload=None):
 		self._state = state
-		self._report(dict(step=self.probe_area_step,count=self.bedLevel.get_count(),state=self._state,payload=payload))
+		self._report(dict(step=self.probe_area_step, count=self.bedLevel.get_count(), state=self._state,payload=payload))
 		self.cmdList.addGCode("M117 {state}: {step}/{count} ".format(state=self._state,step=self.probe_area_step,count=self.bedLevel.get_count()));
 		pass
 
@@ -337,7 +330,7 @@ def dict2gcode(_dict):
 
 class CSwapXY:
 	def run(self,cmd):
-		if gcode.startswith("G0") or gcode.startswith("G1") or gcode.startswith("G92"):
+		if cmd.startswith("G0") or cmd.startswith("G1") or cmd.startswith("G92"):
 			_cmd = ""
 			for i in cmd:
 				if i == 'X':
@@ -472,12 +465,14 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			pass
 		elif(event == 'FileSelected'):
 			self.bed_level = None
-			if self._file_manager.has_analysis(payload['origin'], payload['path']):
-				analysis = self._file_manager.get_metadata(self._origin, self._path)['analysis']
-				cext._logger.info(analysis)
-				self.file_selected = dict(origin=payload['origin'], path=payload['path'],
-									width = analysis['dimensions']['width'], depth = analysis['dimensions']['depth'],
-									min_x = analysis['printingArea']['minX'], min_y = analysis['printingArea']['minY'])
+			origin = payload['origin']
+			path = payload['path']
+			if self._file_manager.has_analysis(origin,path):
+				analysis = self._file_manager.get_metadata(origin, path)['analysis']
+				self._logger.info(analysis)
+				self.file_selected = dict(origin=origin, path=path,
+					width = analysis['dimensions']['width'], depth = analysis['dimensions']['depth'],
+					min_x = analysis['printingArea']['minX'], min_y = analysis['printingArea']['minY'])
 				pass
 			self._update_front()
 			pass
@@ -525,13 +520,13 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		if(command == 'probe_area'):
 			if self.file_selected:
 				self.bed_level = CBedLevel(self.file_selected['width'], self.file_selected['depth'], data['grid'])
-				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self.level)
+				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self.bed_level)
 				self.probe_area_control.start(data)
 			pass
 		if(command == 'probe_area_stop'):
 			if self.probe_area_control:
 				self.probe_area_control.stop()
-				self.bed_level=None
+				self.bed_level = None
 			pass
 		elif(command == 'probe'):
 			self.probe = CProbeControl(self.cmdList, self.control_progress_cb,data)
@@ -599,7 +594,7 @@ if __name__ == '__main__':
 	def test_isEQ(v1, v2):
 		if v1!=v2:
 			caller = getframeinfo(stack()[1][0])
-			print "{file}:{line} Erroe {v1}!={v2}".format (file=caller.filename, line=caller.lineno,v1=v1,v2=v2)
+			print "{file}:{line} Erroe {v1} != {v2}".format (file=caller.filename, line=caller.lineno,v1=v1,v2=v2)
 			pass
 		pass
 	def test_line(msg = None):

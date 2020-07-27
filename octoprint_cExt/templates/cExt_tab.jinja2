@@ -6,20 +6,21 @@
         <b>cExt:Engraver</b>        
     </div>
     <div class="card-body"> 
-    	<span id="id_file_selected"></span>
+    	<label>File: <span id="id_file_selected"></span></label>
     	<div class="w-100"></div> 
     	<span id=id_cext_state></span>
     	<label class="checkbox"><input type="checkbox"data-bind="checked: swap_xy" >swap_xy</label>    	
-    	<button class="btn btn-primary" type="button" data-bind="enable: is_engrave_avaliable, click: engrave" >Engrave</button>
-    	<button class="btn btn-warning" type="button" data-bind="enable: is_dimention_present, click: probe_area" >Probe Area</button>
+        <label>grid_area: <span  data-bind="text:grid_area "></span>mm</label>
+    	<button class="btn btn-primary" type="button" data-bind="enable: is_engrave_avaliable, click: engrave" style="width:40%">Engrave</button>
+    	<button class="btn btn-warning" type="button" data-bind="enable: is_file_selected, click: probe_area" style="width:40%">Probe Area</button>
         <button class="btn btn-secondary btn-block" data-bind="click: probe_area_stop">Cansel/Stop</button>
     	<hr>        
         <button class="btn btn-dark btn-block" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPosition000); }">Set (0)</button>
     	<button class="btn btn-primary btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_DisableSteppers); }" >Motors Off</button>
-        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_dimention_present, click: function() {relative_move_xy(-file_selected_width_grid(),0);}">GotoX -width</button>
-        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_dimention_present, click: function() {relative_move_xy( file_selected_width_grid(),0);}">GotoX +width</button>
-        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_dimention_present, click: function() {relative_move_xy(0,-file_selected_depth_grid());}">GotoY -depth</button>
-        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_dimention_present, click: function() {relative_move_xy(0, file_selected_depth_grid());}">GotoY +depth</button>
+        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_file_selected, click: function() {relative_move_xy(-file_selected_width_grid(),0);}">GotoX -width</button>
+        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_file_selected, click: function() {relative_move_xy( file_selected_width_grid(),0);}">GotoX +width</button>
+        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_file_selected, click: function() {relative_move_xy(0,-file_selected_depth_grid());}">GotoY -depth</button>
+        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_file_selected, click: function() {relative_move_xy(0, file_selected_depth_grid());}">GotoY +depth</button>
         <div class="w-100"></div> 
         <button class="btn btn-warning btn-block" data-bind="click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe_fast());}" >Goto XY(0)</button>
         <hr>  

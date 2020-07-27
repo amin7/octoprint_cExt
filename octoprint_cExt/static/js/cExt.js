@@ -21,7 +21,7 @@ $(function() {
 
       self.isOperational = ko.observable();
       self.swap_xy = ko.observable();
-      self.is_dimention_present = ko.observable(false);
+      self.is_file_selected = ko.observable(false);
       self.is_engrave_avaliable = ko.observable(false);
 
       self.embed_url = ko.observable('');
@@ -80,22 +80,22 @@ $(function() {
             $("#id_probe_state").text(upd.state);
           }
         }
+        if((typeof data.file_selected)!='undefined'){
+          if(data.file_selected){
+            upd=data.file_selected;
+            self.file_selected_width = upd.width;
+            self.file_selected_depth = upd.depth;
+            $("#id_file_selected").text(upd.path+',('+self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm)")
+            self.is_file_selected(true)
+          }else{
+            $("#id_file_selected").text(" ");
+            self.is_file_selected(false)
+          }
+        }
 
         if((typeof data.CBedLevelControl)!='undefined'){
           upd=data.CBedLevelControl;
-          let file_selected_str=""
           let state=""
-          if((typeof upd.path)!='undefined'){
-            file_selected_str+=upd.path;
-          }
-          if(upd.width && upd.depth){
-            self.file_selected_width=upd.width;
-            self.file_selected_depth=upd.depth;
-            if(upd.width && upd.depth){
-              self.is_dimention_present(true)
-            }
-            file_selected_str+=', ('+self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm)";
-          }
 
           if((typeof upd.state)!='undefined'){
             state+=upd.state
@@ -106,9 +106,6 @@ $(function() {
           }
           if((typeof upd.count)!='undefined'){
             state+="/"+ upd.count
-          }
-          if(file_selected_str){
-            $("#id_file_selected").text(file_selected_str)
           }
           if(state){
             $("#id_cext_state").text(state);
@@ -199,9 +196,9 @@ $(function() {
             data: JSON.stringify({
                 command: "probe_area",
                 feed_probe: self.speed_probe_fast(),
-                feed_z:self.printerProfilesViewModel.currentProfileData().axes.z.speed(),
-                feed_xy:self.printerProfilesViewModel.currentProfileData().axes.x.speed(),
-                grid:self.grid_area(),
+                feed_z: self.printerProfilesViewModel.currentProfileData().axes.z.speed(),
+                feed_xy: self.printerProfilesViewModel.currentProfileData().axes.x.speed(),
+                grid: parseInt(self.grid_area()),
                 level_delta_z: self.level_delta_z()
             }),
             contentType: "application/json; charset=UTF-8"
@@ -225,7 +222,7 @@ $(function() {
       if(_val===0){
         return 0
       }
-      return ((_val+self.grid_area())%self.grid_area())*self.grid_area();
+      return Math.ceil(_val/self.grid_area())*self.grid_area();
       };  
     self.file_selected_width_grid=function() {
       return self.up_to_grid(self.file_selected_width);
