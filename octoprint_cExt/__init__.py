@@ -13,69 +13,72 @@ import re
 
 import math
 from collections import deque
-#-------------- const
+
+# -------------- const
 GCODE_AUTO_HOME = 'G28'
-GCODE_ABSOLUTE_POSITIONING ='G90'
-GCODE_RELATIVEPOSITIONING ='G91'
-GCODE_PROBE_UP="G38.4 F{feed} Z{dist}"
-GCODE_PROBE_DOWN="G38.2 F{feed} Z{dist}"
-GCODE_AUTO_HOME="G28 {axis}"
-GCODE_MOVE_XY="G0 F{feed} X{pos_x} Y{pos_y}"
-GCODE_MOVE_Z="G0 F{feed} Z{dist}"
-GCODE_SET_POS_000="G92 X0 Y0 Z0"
-GCODE_SET_POS_00Z="G92 X0 Y0 Z{pos_z}"
+GCODE_ABSOLUTE_POSITIONING = 'G90'
+GCODE_RELATIVEPOSITIONING = 'G91'
+GCODE_PROBE_UP = "G38.4 F{feed} Z{dist}"
+GCODE_PROBE_DOWN = "G38.2 F{feed} Z{dist}"
+GCODE_AUTO_HOME = "G28 {axis}"
+GCODE_MOVE_XY = "G0 F{feed} X{pos_x} Y{pos_y}"
+GCODE_MOVE_Z = "G0 F{feed} Z{dist}"
+GCODE_SET_POS_000 = "G92 X0 Y0 Z0"
+GCODE_SET_POS_00Z = "G92 X0 Y0 Z{pos_z}"
+
 
 class CCmdList:
 	def __init__(self, sendGCode):
 		self.sendGCode = sendGCode
 
 	class CCommand:
-		def __init__(self, command, callBack =None):
+		def __init__(self, command, callBack=None):
 			self.command = command
 			self.callBack = callBack
 
-	cmdList=deque()
-	processingCommand=None
-	response=[]
+	cmdList = deque()
+	processingCommand = None
+	response = []
 
 	def clearCommandList(self):
 		self.cmdList.clear()
 
 	def processCommandList(self):
-		if self.processingCommand==None:
+		if self.processingCommand == None:
 			if self.cmdList:
-				self.processingCommand=self.cmdList.popleft()
+				self.processingCommand = self.cmdList.popleft()
 				self.sendGCode(self.processingCommand.command)
 				pass
 			pass
 		pass
 
-	def addGCode(self,commands,callBack = None):
+	def addGCode(self, commands, callBack=None):
 		if isinstance(commands, list):
-			commlen=len(commands)
+			commlen = len(commands)
 			for i in range(commlen):
-				cmd=self.CCommand(commands[i]);
-				if(i==commlen-1):
-					cmd.callBack=callBack
+				cmd = self.CCommand(commands[i]);
+				if (i == commlen - 1):
+					cmd.callBack = callBack
 				self.cmdList.append(cmd)
 			pass
 		else:
-			self.cmdList.append(self.CCommand(commands,callBack))
+			self.cmdList.append(self.CCommand(commands, callBack))
 			pass
 		self.processCommandList()
 
-	def processResponce(self,response):
-		if self.processingCommand!=None:
+	def processResponce(self, response):
+		if self.processingCommand != None:
 			if not response.startswith("echo:busy: processing"):
 				self.response.append(response);
-				if(response.startswith('ok')):
-					if(self.processingCommand.callBack!=None):
+				if (response.startswith('ok')):
+					if (self.processingCommand.callBack != None):
 						self.processingCommand.callBack(self.response)
-					self.processingCommand=None
-					self.response=[]
+					self.processingCommand = None
+					self.response = []
 					self.processCommandList()
 
-#--------------------------------------------------------------
+
+# --------------------------------------------------------------
 #
 #  *                           z2   --|
 #  *                 z0        |      |
@@ -97,9 +100,10 @@ class CBedLevel:
 		self.m_sizeX = int(math.ceil(float(width) / grid) * grid)
 		self.m_sizeY = int(math.ceil(float(depth) / grid) * grid)
 		self.m_grid = int(grid)
-		self.m_ZheighArray = [[None for x in range(int(self.m_sizeY/grid+1))] for y in range(int(self.m_sizeX/grid+1))]
+		self.m_ZheighArray = [[None for x in range(int(self.m_sizeY / grid + 1))] for y in
+							  range(int(self.m_sizeX / grid + 1))]
 
-	#protected
+	# protected
 	@staticmethod
 	def __calc_z0(a0, a1, z1, a2, z2):
 		return z1 + (z2 - z1) * (a0 - a1) / (a2 - a1)
@@ -112,28 +116,28 @@ class CBedLevel:
 		return int(coord / self.m_grid)
 
 	def get_i_x(self, index):
-		maxx = self.m_sizeX/self.m_grid
-		posx = index%(maxx+1)
-		if self.get_i_y(index)%2:
-			posx = maxx-posx
+		maxx = self.m_sizeX / self.m_grid
+		posx = index % (maxx + 1)
+		if self.get_i_y(index) % 2:
+			posx = maxx - posx
 			pass
 		return int(posx)
 
 	def get_i_y(self, index):
-		return int(index/(self.m_sizeX/self.m_grid+1))
+		return int(index / (self.m_sizeX / self.m_grid + 1))
 
-	def mesh_z_value(self,mX, mY):
+	def mesh_z_value(self, mX, mY):
 		return self.m_ZheighArray[mX][mY]
 
-   #public
+	# public
 
 	def set(self, index, z_height):
-		self.m_ZheighArray[self.get_i_x(index)][self.get_i_y(index)]=z_height;
+		self.m_ZheighArray[self.get_i_x(index)][self.get_i_y(index)] = z_height;
 
 	def get_count(self):
 		if math.isnan(self.m_sizeX) or math.isnan(self.m_sizeY) or math.isnan(self.m_grid):
 			return -1
-		return int((self.m_sizeX/self.m_grid+1)*(self.m_sizeY/self.m_grid+1))
+		return int((self.m_sizeX / self.m_grid + 1) * (self.m_sizeY / self.m_grid + 1))
 
 	def get_z_correction(self, rx0, ry0):
 		if self.m_sizeX < rx0 or self.m_sizeY < ry0:
@@ -146,26 +150,27 @@ class CBedLevel:
 		my = cy * self.m_grid
 
 		if (mx == rx0 and my == ry0):
-			#in dot
+			# in dot
 			return self.mesh_z_value(cx, cy);
 		if (mx == rx0):
-			#in line X
+			# in line X
 			return self.__calc_z0(ry0, my, self.mesh_z_value(cx, cy), my + self.m_grid, self.mesh_z_value(cx, cy + 1))
 
 		if (my == ry0):
-			#in line Y
-			return self.__calc_z0(rx0, mx, self.mesh_z_value(cx, cy),  mx + self.m_grid, self.mesh_z_value(cx + 1, cy))
+			# in line Y
+			return self.__calc_z0(rx0, mx, self.mesh_z_value(cx, cy), mx + self.m_grid, self.mesh_z_value(cx + 1, cy))
 		z1 = self.__calc_z0(rx0, mx, self.mesh_z_value(cx, cy), mx + self.m_grid, self.mesh_z_value(cx + 1, cy))
 		z2 = self.__calc_z0(rx0, mx, self.mesh_z_value(cx, cy + 1), mx + self.m_grid, self.mesh_z_value(cx + 1, cy + 1))
 		return self.__calc_z0(ry0, my, z1, my + self.m_grid, z2)
 
-#--------------------------------------------------------------
-#--------------------------------------------------------------
+
+# --------------------------------------------------------------
+# --------------------------------------------------------------
 class CBedLevelControl:
-	def __init__(self,cmdList,progress_cb,bedLevel):
-		self.cmdList=cmdList
-		self.bedLevel=bedLevel
-		self.progress_cb=progress_cb
+	def __init__(self, cmdList, progress_cb, bedLevel):
+		self.cmdList = cmdList
+		self.bedLevel = bedLevel
+		self.progress_cb = progress_cb
 		pass
 
 	def _report(self, data):
@@ -177,18 +182,21 @@ class CBedLevelControl:
 
 	def on_progress(self, state, payload=None):
 		self._state = state
-		self._report(dict(step=self.probe_area_step, count=self.bedLevel.get_count(), state=self._state,payload=payload))
-		self.cmdList.addGCode("M117 {state}: {step}/{count} ".format(state=self._state,step=self.probe_area_step,count=self.bedLevel.get_count()));
+		self._report(
+			dict(step=self.probe_area_step, count=self.bedLevel.get_count(), state=self._state, payload=payload))
+		self.cmdList.addGCode("M117 {state}: {step}/{count} ".format(state=self._state, step=self.probe_area_step,
+																	 count=self.bedLevel.get_count()));
 		pass
 
-	def on_error(self,err,payload=None):
-		self._state=err
-		self._report(dict(state=self._state,payload=payload))
+	def on_error(self, err, payload=None):
+		self._state = err
+		self._report(dict(state=self._state, payload=payload))
 		self.cmdList.clearCommandList()
-		self.cmdList.addGCode(["M117 Err:{state}".format(state=self._state),GCODE_RELATIVEPOSITIONING, GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z)])
+		self.cmdList.addGCode(["M117 Err:{state}".format(state=self._state), GCODE_RELATIVEPOSITIONING,
+							   GCODE_MOVE_Z.format(feed=self.feed_z, dist=self.level_delta_z)])
 		pass
 
-	def probe_cb_stop_on_error(self,response):
+	def probe_cb_stop_on_error(self, response):
 		for line in response:
 			if line.startswith("Error:Failed to reach target"):
 				self.on_error("Error:Failed to reach target");
@@ -196,71 +204,80 @@ class CBedLevelControl:
 			pass
 		pass
 
-	def probe_cb_coordinates(self,response):
+	def probe_cb_coordinates(self, response):
 		for line in response:
-			match=re.match("^X:(?P<val_x>-?\d+\.\d+)\sY:(?P<val_y>-?\d+\.\d+)\sZ:(?P<val_z>-?\d+\.\d+)\sE:-?\d+\.\d+",line)
-			if(match):
-				zpos=0
-				if(self.probe_area_step):
+			match = re.match("^X:(?P<val_x>-?\d+\.\d+)\sY:(?P<val_y>-?\d+\.\d+)\sZ:(?P<val_z>-?\d+\.\d+)\sE:-?\d+\.\d+",
+							 line)
+			if (match):
+				zpos = 0
+				if (self.probe_area_step):
 					zpos = match.group('val_z')
 				else:
-					self.cmdList.addGCode(GCODE_SET_POS_00Z.format(pos_z=self.level_delta_z))#aftre probe heigh
-				self.bedLevel.set(self.probe_area_step,zpos);
-				self.probe_area_step+=1;
-				if(self.probe_area_step<self.bedLevel.get_count()):
+					self.cmdList.addGCode(GCODE_SET_POS_00Z.format(pos_z=self.level_delta_z))  # aftre probe heigh
+				self.bedLevel.set(self.probe_area_step, zpos);
+				self.probe_area_step += 1;
+				if (self.probe_area_step < self.bedLevel.get_count()):
 					self.make_probe()
 					self.on_progress("Progress")
 				else:
-					self.on_progress("Done",self.bedLevel.m_ZheighArray)
+					self.on_progress("Done", self.bedLevel.m_ZheighArray)
 				return
 			pass
-		self.on_error("err pos",response)
+		self.on_error("err pos", response)
 		pass
 
 	def make_probe(self):
-		#go to pos
-		pos_x=self.bedLevel.get_i_x(self.probe_area_step)*self.bedLevel.m_grid
-		pos_y=self.bedLevel.get_i_y(self.probe_area_step)*self.bedLevel.m_grid
-		self.cmdList.addGCode([GCODE_ABSOLUTE_POSITIONING, GCODE_MOVE_XY.format(feed=self.feed_xy,pos_x=pos_x,pos_y=pos_y)])
-		#probe
-		self.cmdList.addGCode([GCODE_RELATIVEPOSITIONING, GCODE_PROBE_DOWN.format(feed=self.feed_probe,dist=-2*self.level_delta_z)],self.probe_cb_stop_on_error)
-		#save pos
-		self.cmdList.addGCode("M114",self.probe_cb_coordinates)
-		#hop
-		self.cmdList.addGCode(GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z))
+		# go to pos
+		pos_x = self.bedLevel.get_i_x(self.probe_area_step) * self.bedLevel.m_grid
+		pos_y = self.bedLevel.get_i_y(self.probe_area_step) * self.bedLevel.m_grid
+		self.cmdList.addGCode(
+			[GCODE_ABSOLUTE_POSITIONING, GCODE_MOVE_XY.format(feed=self.feed_xy, pos_x=pos_x, pos_y=pos_y)])
+		# probe
+		self.cmdList.addGCode(
+			[GCODE_RELATIVEPOSITIONING, GCODE_PROBE_DOWN.format(feed=self.feed_probe, dist=-2 * self.level_delta_z)],
+			self.probe_cb_stop_on_error)
+		# save pos
+		self.cmdList.addGCode("M114", self.probe_cb_coordinates)
+		# hop
+		self.cmdList.addGCode(GCODE_MOVE_Z.format(feed=self.feed_z, dist=self.level_delta_z))
 		pass
 
 	def stop(self):
-		if self._state== "Init" or self._state== "Progress":
+		if self._state == "Init" or self._state == "Progress":
 			self.cmdList.clearCommandList()
-			self.cmdList.addGCode(["M117 Stop",GCODE_RELATIVEPOSITIONING, GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z)])
-		self._state=''
+			self.cmdList.addGCode(["M117 Stop", GCODE_RELATIVEPOSITIONING,
+								   GCODE_MOVE_Z.format(feed=self.feed_z, dist=self.level_delta_z)])
+		self._state = ''
 		self._report(dict(state=self._state))
 		pass
 
 	def start(self, data):
-		self.probe_area_step=0
-		self.feed_probe=data['feed_probe']
-		self.feed_z=data['feed_z']
-		self.feed_xy=data['feed_xy']
-		self.level_delta_z=data['level_delta_z']
+		self.probe_area_step = 0
+		self.feed_probe = data['feed_probe']
+		self.feed_z = data['feed_z']
+		self.feed_xy = data['feed_xy']
+		self.level_delta_z = data['level_delta_z']
 		self.on_progress("Init")
-		#preinit
-		self.cmdList.addGCode([GCODE_SET_POS_000,GCODE_RELATIVEPOSITIONING,GCODE_MOVE_Z.format(feed=self.feed_z,dist=self.level_delta_z), GCODE_MOVE_XY.format(feed=self.feed_xy,pos_x=1,pos_y=1)])
+		# preinit
+		self.cmdList.addGCode([GCODE_SET_POS_000, GCODE_RELATIVEPOSITIONING,
+							   GCODE_MOVE_Z.format(feed=self.feed_z, dist=self.level_delta_z),
+							   GCODE_MOVE_XY.format(feed=self.feed_xy, pos_x=1, pos_y=1)])
 		self.make_probe()
 		pass
 
 	def engrave(self):
 		pass
+
 	pass
 
-#--------------------------------------------------------------
-#--------------------------------------------------------------
+
+# --------------------------------------------------------------
+# --------------------------------------------------------------
 class CProbeControl:
-	def __init__(self,cmdList,progress_cb, data):
-		self.cmdList=cmdList
-		self.progress_cb=progress_cb
-		self._report(dict(state = 'probing'))
+	def __init__(self, cmdList, progress_cb, data):
+		self.cmdList = cmdList
+		self.progress_cb = progress_cb
+		self._report(dict(state='probing'))
 		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING)
 		# fast probe
 		self.cmdList.addGCode(GCODE_PROBE_DOWN.format(feed=data["feed"], dist=-1 * data["distanse"]),
@@ -269,10 +286,10 @@ class CProbeControl:
 		self.cmdList.addGCode("M114", self.cb_echo)
 		pass
 
-	def _report(self,data):
+	def _report(self, data):
 		self.progress_cb(dict(CProbeControl=data))
 
-	def cb_stop_on_error(self,response):
+	def cb_stop_on_error(self, response):
 		for line in response:
 			if line.startswith("Error:Failed to reach target"):
 				self.cmdList.clearCommandList()
@@ -280,19 +297,23 @@ class CProbeControl:
 				pass
 		pass
 
-	def cb_echo(self,response):
+	def cb_echo(self, response):
 		for line in response:
-			match=re.match("^X:(?P<val_x>-?\d+\.\d+)\sY:(?P<val_y>-?\d+\.\d+)\sZ:(?P<val_z>-?\d+\.\d+)\sE:-?\d+\.\d+",line)
-			if(match):
-				result="Probe Done Z:{zpos}".format(zpos=match.group('val_z'));
+			match = re.match("^X:(?P<val_x>-?\d+\.\d+)\sY:(?P<val_y>-?\d+\.\d+)\sZ:(?P<val_z>-?\d+\.\d+)\sE:-?\d+\.\d+",
+							 line)
+			if (match):
+				result = "Probe Done Z:{zpos}".format(zpos=match.group('val_z'));
 				self._report(dict(state=result))
-				self.cmdList.addGCode("M117 "+result);
+				self.cmdList.addGCode("M117 " + result);
 				return
-		self._report(dict(state='err_pos',response=response))
+		self._report(dict(state='err_pos', response=response))
 		pass
+
 	pass
-#--------------------------------------------------------------
-def parse_gcode(gcode):
+
+
+# --------------------------------------------------------------
+def gcode2dict(gcode):
 	gcode = gcode.split(";")[0]  # remove comment
 	_cmd = re.search("((^.\d+\.\d+)|(^.\d+))", gcode)
 	if not _cmd:
@@ -314,17 +335,19 @@ def parse_gcode(gcode):
 		parsed['F'] = float(_valF.group(1))
 	return parsed
 
+
 def dict2gcode(_dict):
 	if "cmd" not in _dict:
 		return None
-	gcode= _dict['cmd']
+	gcode = _dict['cmd']
 	for key in _dict.keys():
 		if key != "cmd":
-			gcode+= " {key}{val}".format(key=key,val=_dict[key])
+			gcode += " {key}{val}".format(key=key, val=_dict[key])
 	return gcode
 
+
 class CSwapXY:
-	def run(self,cmd):
+	def run(self, cmd):
 		if cmd.startswith("G0") or cmd.startswith("G1") or cmd.startswith("G92"):
 			_cmd = ""
 			for i in cmd:
@@ -335,7 +358,9 @@ class CSwapXY:
 				_cmd += i
 			return _cmd
 		pass
+
 	pass
+
 
 class CEngrave:
 	def __init__(self, bedLevel, offs_X, offs_Y):
@@ -367,11 +392,11 @@ class CEngrave:
 		self._cur_X = x
 		self._cur_Y = y
 		self._cur_Z = z
-		g_parsed["Z"] = z+ cor_z
+		g_parsed["Z"] = z + cor_z
 		return dict2gcode(g_parsed)
 
 	def run(self, cmd):
-		g_parsed = parse_gcode(cmd)
+		g_parsed = gcode2dict(cmd)
 		if g_parsed["cmd"] == "G0" or g_parsed["cmd"] == "G1":
 			if "X" not in g_parsed and "Y" not in g_parsed:
 				return self.__line_z_move(g_parsed)
@@ -380,31 +405,31 @@ class CEngrave:
 			dest_y = self._cur_Y
 			dest_z = self._cur_Z
 
-			#add offet for absolute only
+			# add offet for absolute only
 			if "X" in g_parsed:
-				dest_x= g_parsed["X"] + self._offs_X
+				dest_x = g_parsed["X"] + self._offs_X
 				pass
 			if "Y" in g_parsed:
-				dest_y= g_parsed["Y"] + self._offs_Y
+				dest_y = g_parsed["Y"] + self._offs_Y
 				pass
 
 			line_len = math.hypot(dest_x - self._cur_X, dest_y - self._cur_Y);
-			if 0 == line_len:# move to same coordinate
+			if 0 == line_len:  # move to same coordinate
 				return self.__line_z_move(g_parsed)
 
 			if "Z" in g_parsed:
-				dest_Z= g_parsed["Z"]
+				dest_Z = g_parsed["Z"]
 				pass
 
-			step_div = math.ceil(line_len / self._bed_level.m_grid )
+			step_div = math.ceil(line_len / self._bed_level.m_grid)
 			dx = (dest_x - self._cur_X) / step_div
 			dy = (dest_y - self._cur_Y) / step_div
 			dz = (dest_z - self._cur_Z) / step_div
 			g_parsed["X"] = self._cur_X
 			g_parsed["Y"] = self._cur_Y
 			g_parsed["Z"] = self._cur_Z
-			sublines=[]
-			while line_len> self._bed_level.m_grid:
+			sublines = []
+			while line_len > self._bed_level.m_grid:
 				g_parsed["X"] += dx
 				g_parsed["Y"] += dy
 				g_parsed["Z"] += dz
@@ -417,11 +442,90 @@ class CEngrave:
 			sublines.append(self.__line_z_move(g_parsed))
 			return sublines
 		return cmd
+
 	pass
 
 
-#--------------------------------------------------------------
-#--------------------------------------------------------------
+class CAnalising:
+	_cur_X = 0
+	_cur_Y = 0
+	_cur_Z = 0
+	_total_lines = 0
+	_min_x = None
+	_min_y = None
+	_min_z = None
+	_max_x = None
+	_max_y = None
+	_max_z = None
+
+	def __init__(self, origin, path):
+		self._origin = origin
+		self._path = path
+		pass
+
+	@staticmethod
+	def __upd_min(_min, val):
+		if _min is None or _min > val:
+			return val
+		return _min
+
+	@staticmethod
+	def __upd_max(_max, val):
+		if _max is None or _max < val:
+			return val
+		return _max
+	@staticmethod
+	def __sub(val1, val2):
+		if val1 is None or val2 is None:
+			return None
+		return val1-val2
+
+	def _analising_pos(self):
+		self._min_x = self.__upd_min(self._min_x, self._cur_X)
+		self._min_y = self.__upd_min(self._min_y, self._cur_Y)
+		self._min_z = self.__upd_min(self._min_z, self._cur_Z)
+		self._max_x = self.__upd_max(self._max_x, self._cur_X)
+		self._max_y = self.__upd_max(self._max_y, self._cur_Y)
+		self._max_z = self.__upd_max(self._max_z, self._cur_Z)
+		pass
+
+	def add(self, cmd):
+		self._total_lines += 1
+		g_parsed = gcode2dict(cmd)
+		# calk start point
+		if g_parsed["cmd"] == "G1":
+			self._analising_pos()
+			pass
+		# update pos
+		if g_parsed["cmd"] == "G0" or g_parsed["cmd"] == "G1":
+			if "X" in g_parsed:
+				self._cur_X = g_parsed["X"]
+				pass
+			if "Y" in g_parsed:
+				self._cur_Y = g_parsed["Y"]
+				pass
+			if "Z" in g_parsed:
+				self._cur_Z = g_parsed["Z"]
+				pass
+			pass
+		# calk end point
+		if g_parsed["cmd"] == "G1":
+			self._analising_pos()
+			pass
+		pass
+
+	def get_analising(self):
+		return dict(origin=self._origin, path=self._path,
+					width=self.__sub(self._max_x, self._min_x), depth=self.__sub(self._max_y, self._min_y),
+					min=dict(x=self._min_x, y=self._min_y, z=self._min_z),
+					max=dict(x=self._max_x, y=self._max_y, z=self._max_z)
+					)
+
+	pass
+
+
+# --------------------------------------------------------------
+# --------------------------------------------------------------
 class CextPlugin(octoprint.plugin.SettingsPlugin,
 				 octoprint.plugin.AssetPlugin,
 				 octoprint.plugin.TemplatePlugin,
@@ -453,7 +557,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			less=["less/cExt.less"]
 		)
 
-	#~~ TemplatePlugin mixin
+	# ~~ TemplatePlugin mixin
 
 	def get_template_configs(self):
 		return [
@@ -504,47 +608,40 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		self._logger.info(payload)
 		# if self.probe_area_control:
 		# 	self.probe_area_control.on_event(event, payload)
-		if(event=='UserLoggedIn'):
+		if (event == 'UserLoggedIn'):
 			self._update_front()
 			pass
-		elif(event == 'FileSelected'):
+		elif (event == 'FileSelected'):
 			self.bed_level = None
-			origin = payload['origin']
-			path = payload['path']
-			if self._file_manager.has_analysis(origin,path):
-				analysis = self._file_manager.get_metadata(origin, path)['analysis']
-				self._logger.info(analysis)
-				self.file_selected = dict(origin=origin, path=path,
-					width = analysis['dimensions']['width'], depth = analysis['dimensions']['depth'],
-					min_x = analysis['printingArea']['minX'], min_y = analysis['printingArea']['minY'])
-				pass
+			self._analysis = None
+			self.file_selected = dict(origin=payload['origin'], path=payload['path'])
 			self._update_front()
 			pass
 		pass
 
 	def _update_front(self):
-		data = dict(file_selected = self.file_selected)
+		data = dict(file_selected=self.file_selected, analysis=self._analysis)
 		if self.probe_area_control:
 			self.probe_area_control.on_update_front(data)
 		self._plugin_manager.send_plugin_message(self._identifier, data)
 		pass
 
-	def control_progress_cb(self,data):
+	def control_progress_cb(self, data):
 		self._plugin_manager.send_plugin_message(self._identifier, data)
 		pass
 
-#----------------------------------
+	# ----------------------------------
 	#                                               pos_x=self._settings.get_int(["probe_offset_x"])+self._settings.get_int(["plate_coner_xy"]),
 	#                                               pos_y=self._settings.get_int(["probe_offset_y"])+self._settings.get_int(["plate_coner_xy"])))
 
-#--------------------------------------------
+	# --------------------------------------------
 	def gcode_received_hook(self, comm_instance, line, *args, **kwargs):
-		if self.cmdList!=None:
+		if self.cmdList != None:
 			self.cmdList.processResponce(line)
 		return line
 
 	def gcode_queuing(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):
-		self._logger.info(dict(cmd=cmd,type=cmd_type,gcode=gcode))
+		self._logger.info(dict(cmd=cmd, type=cmd_type, gcode=gcode))
 		if self.swap_xy:
 			cmd = self.swap_xy.run(cmd)
 			pass
@@ -557,36 +654,44 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		return dict(probe_area=['feed_probe', 'feed_z', 'feed_xy', 'grid', 'level_delta_z'],
 					probe=['distanse', 'feed'],
 					probe_area_stop=[],
-					swap_xy=['active'])
+					swap_xy=['active'],
+					engrave=[],
+					analysis=[])
 
 	def on_api_command(self, command, data):
-		self._logger.info("on_api_command:"+command)
-		if(command == 'probe_area'):
+		self._logger.info("on_api_command:" + command)
+		if (command == 'probe_area'):
 			if self.file_selected:
 				self.bed_level = CBedLevel(self.file_selected['width'], self.file_selected['depth'], data['grid'])
 				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self.bed_level)
 				self.probe_area_control.start(data)
 			pass
-		if(command == 'probe_area_stop'):
+		if (command == 'probe_area_stop'):
 			if self.probe_area_control:
 				self.probe_area_control.stop()
 				self.bed_level = None
 			pass
-		elif(command == 'probe'):
-			self.probe = CProbeControl(self.cmdList, self.control_progress_cb,data)
+		elif (command == 'probe'):
+			self.probe = CProbeControl(self.cmdList, self.control_progress_cb, data)
 			pass
-		elif(command == 'swap_xy'):
+		elif (command == 'swap_xy'):
 			if data['active']:
 				self.swap_xy = CSwapXY()
 			else:
 				self.swap_xy = None
 			pass
-		elif(command == 'engrave'):
+		elif (command == 'engrave'):
 			if self.bed_level:
 				self.engrave = CEngrave(self.level, self.file_selected['minX'], self.file_selected['minY'])
 			else:
 				self._logger.info("no level inited")
 			pass
+		elif command == 'analysis':
+			if self.file_selected:
+				self._analysis = None
+			pass
+		self._update_front()
+		pass
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
@@ -594,12 +699,13 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 # can be overwritten via __plugin_xyz__ control properties. See the documentation for that.
 __plugin_name__ = "Cext Plugin"
 
+
 # Starting with OctoPrint 1.4.0 OctoPrint will also support to run under Python 3 in addition to the deprecated
 # Python 2. New plugins should make sure to run under both versions for now. Uncomment one of the following
 # compatibility flags according to what Python versions your plugin supports!
-#__plugin_pythoncompat__ = ">=2.7,<3" # only python 2
-#__plugin_pythoncompat__ = ">=3,<4" # only python 3
-#__plugin_pythoncompat__ = ">=2.7,<4" # python 2 and 3
+# __plugin_pythoncompat__ = ">=2.7,<3" # only python 2
+# __plugin_pythoncompat__ = ">=3,<4" # only python 3
+# __plugin_pythoncompat__ = ">=2.7,<4" # python 2 and 3
 
 def __plugin_load__():
 	global __plugin_implementation__
@@ -608,13 +714,14 @@ def __plugin_load__():
 	global __plugin_hooks__
 	__plugin_hooks__ = {
 		"octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
-		"octoprint.comm.protocol.gcode.received":__plugin_implementation__.gcode_received_hook,
+		"octoprint.comm.protocol.gcode.received": __plugin_implementation__.gcode_received_hook,
 		"octoprint.comm.protocol.gcode.queuing": __plugin_implementation__.gcode_queuing
 	}
 
-	#show tabs
+	# show tabs
 	global __plugin_settings_overlay__
-	__plugin_settings_overlay__ = dict(appearance=dict(components=dict(order=dict(tab=["temperature", "control", "gcodeviewer", "terminal","plugin_cExt"]))))
+	__plugin_settings_overlay__ = dict(appearance=dict(
+		components=dict(order=dict(tab=["temperature", "control", "gcodeviewer", "terminal", "plugin_cExt"]))))
 
 
 # test
@@ -624,34 +731,47 @@ def sendGCode(response):
 	print("send :" + response)
 	pass
 
-#class CCext_test:
+
+# class CCext_test:
 class TEST_file_manager:
-	_analysis =None
-	def has_analysis(self,a1,a2):
-		return self._analysis!=None
-	def get_metadata(self,m_origin,_path):
+	_analysis = None
+
+	def has_analysis(self, a1, a2):
+		return self._analysis != None
+
+	def get_metadata(self, m_origin, _path):
 		return dict(analysis=_analysis)
+
 	pass
+
 
 if __name__ == '__main__':
 	from inspect import getframeinfo, stack
+
+
 	def test_isEQ(v1, v2):
-		if v1!=v2:
+		if v1 != v2:
 			caller = getframeinfo(stack()[1][0])
-			print "{file}:{line} ERROR {v1} != {v2}".format (file=caller.filename, line=caller.lineno,v1=v1,v2=v2)
+			print "{file}:{line} ERROR {v1} != {v2}".format(file=caller.filename, line=caller.lineno, v1=v1, v2=v2)
 			pass
 		pass
-	def test_line(msg = None):
+
+
+	def test_line(msg=None):
 		caller = getframeinfo(stack()[1][0])
-		print "{file}:{line} {msg}".format (file=caller.filename, line=caller.lineno, msg=msg)
+		print "{file}:{line} {msg}".format(file=caller.filename, line=caller.lineno, msg=msg)
 		pass
+
+
 	def testCB(response):
 		print(response)
 		pass
+
+
 	print("test begin")
 	# test1.py executed as script
 	# do something
-	cmdList=CCmdList(sendGCode)
+	cmdList = CCmdList(sendGCode)
 	# test.addGCode("G10\n\nF20",testCB)
 	# print(test.cmdList)
 	# test.processResponce("ok")
@@ -685,7 +805,7 @@ if __name__ == '__main__':
 	# print(data)
 	# control._width=30
 	# control._depth=10
-	bed_level_control.start(dict(feed_probe=40,feed_z=300,feed_xy=500,level_delta_z=0.5,grid=10))
+	bed_level_control.start(dict(feed_probe=40, feed_z=300, feed_xy=500, level_delta_z=0.5, grid=10))
 	#
 	# print(level.m_ZheighArray)
 	# control.cmdList.processResponce("ok")
@@ -699,16 +819,16 @@ if __name__ == '__main__':
 	# print(level.m_ZheighArray)
 	# print(level.get_z_correction(0,0))
 	test_line()
-	gc=parse_gcode("G1.1")
+	gc = gcode2dict("G1.1")
 	test_isEQ(gc['cmd'], "G1.1")
-	gc=parse_gcode("G11")
+	gc = gcode2dict("G11")
 	test_isEQ(gc['cmd'], "G11")
 
-	gc = parse_gcode("G11 X10; X20")
+	gc = gcode2dict("G11 X10; X20")
 	test_isEQ(gc['cmd'], "G11")
 	test_isEQ(gc['X'], 10)
 
-	gc=parse_gcode("G13 X1 Y10.2 Z23 F500")
+	gc = gcode2dict("G13 X1 Y10.2 Z23 F500")
 	test_isEQ(gc['cmd'], "G13")
 	test_isEQ(gc['X'], 1)
 	test_isEQ(gc['Y'], 10.2)
@@ -722,4 +842,10 @@ if __name__ == '__main__':
 	test_isEQ(engrave.run("G1 X0 Y0"), "G1 Y0.0 X0.0 Z0")
 	test_isEQ(engrave.run("G1 X5 Y5"), ['G1 Y2.5 X2.5 Z2.5', 'G1 Y5.0 X5.0 Z4'])
 	test_isEQ(engrave.run("G1 Z1"), "G1 Z5.0")
+
+	test_line()
+	analising = CAnalising("or", "pa")
+	analising.add("G0 X10")
+	analising.add("G1 Y20")
+	print(analising.get_analising())
 	print("test end ")

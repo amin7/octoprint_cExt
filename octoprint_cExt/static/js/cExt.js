@@ -85,7 +85,8 @@ $(function() {
             upd=data.file_selected;
             self.file_selected_width = upd.width;
             self.file_selected_depth = upd.depth;
-            $("#id_file_selected").text(upd.path+',('+self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm)")
+            $("#id_file_selected").text(upd.path)
+            $("#id_file_analisys").text(self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm")
             self.is_file_selected(true)
           }else{
             $("#id_file_selected").text(" ");
