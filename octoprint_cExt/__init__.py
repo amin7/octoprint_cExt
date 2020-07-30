@@ -10,7 +10,7 @@ from __future__ import absolute_import
 # Take a look at the documentation on what other plugin mixins are available.
 import octoprint.plugin
 import re
-
+import io
 import math
 from collections import deque
 
@@ -317,7 +317,7 @@ def gcode2dict(gcode):
 	gcode = gcode.split(";")[0]  # remove comment
 	_cmd = re.search("((^.\d+\.\d+)|(^.\d+))", gcode)
 	if not _cmd:
-		return None
+		return dict(cmd=None)
 	parsed = dict(cmd=_cmd.group())
 
 	_valX = re.search("X((\d+\.\d+)|(\d+))", gcode)
@@ -458,11 +458,6 @@ class CAnalising:
 	_max_y = None
 	_max_z = None
 
-	def __init__(self, origin, path):
-		self._origin = origin
-		self._path = path
-		pass
-
 	@staticmethod
 	def __upd_min(_min, val):
 		if _min is None or _min > val:
@@ -515,8 +510,7 @@ class CAnalising:
 		pass
 
 	def get_analising(self):
-		return dict(origin=self._origin, path=self._path,
-					width=self.__sub(self._max_x, self._min_x), depth=self.__sub(self._max_y, self._min_y),
+		return dict(width=self.__sub(self._max_x, self._min_x), depth=self.__sub(self._max_y, self._min_y),
 					min=dict(x=self._min_x, y=self._min_y, z=self._min_z),
 					max=dict(x=self._max_x, y=self._max_y, z=self._max_z)
 					)
@@ -590,10 +584,11 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	cmdList = None
 	bed_level = None
 	probe_area_control = None
-	probe = None
-	swap_xy = None
-	engrave = None
+	_probe = None
+	_swap_xy = None
+	_engrave = None
 	file_selected = None
+	_analysis = None
 
 	def on_after_startup(self):
 		self._logger.info("PluginA starting up")
@@ -642,11 +637,11 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def gcode_queuing(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):
 		self._logger.info(dict(cmd=cmd, type=cmd_type, gcode=gcode))
-		if self.swap_xy:
-			cmd = self.swap_xy.run(cmd)
+		if self._swap_xy:
+			cmd = self._swap_xy.run(cmd)
 			pass
-		if self.engrave:
-			cmd = self.engrave.run(cmd)
+		if self._engrave:
+			cmd = self._engrave.run(cmd)
 			pass
 		return cmd
 
@@ -661,7 +656,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	def on_api_command(self, command, data):
 		self._logger.info("on_api_command:" + command)
 		if (command == 'probe_area'):
-			if self.file_selected:
+			if self.file_selected and self._analysis:
 				self.bed_level = CBedLevel(self.file_selected['width'], self.file_selected['depth'], data['grid'])
 				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self.bed_level)
 				self.probe_area_control.start(data)
@@ -672,23 +667,37 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				self.bed_level = None
 			pass
 		elif (command == 'probe'):
-			self.probe = CProbeControl(self.cmdList, self.control_progress_cb, data)
+			self._probe = CProbeControl(self.cmdList, self.control_progress_cb, data)
 			pass
 		elif (command == 'swap_xy'):
 			if data['active']:
-				self.swap_xy = CSwapXY()
+				self._swap_xy = CSwapXY()
 			else:
-				self.swap_xy = None
+				self._swap_xy = None
 			pass
 		elif (command == 'engrave'):
 			if self.bed_level:
-				self.engrave = CEngrave(self.level, self.file_selected['minX'], self.file_selected['minY'])
+				self._engrave = CEngrave(self.level, self.file_selected['minX'], self.file_selected['minY'])
 			else:
-				self._logger.info("no level inited")
+				self._logger.info("no bed_level")
 			pass
 		elif command == 'analysis':
 			if self.file_selected:
-				self._analysis = None
+				path_on_disk = self._file_manager.path_on_disk(self.file_selected['origin'],self.file_selected['path'])
+				with io.open(path_on_disk, mode='r', encoding="utf-8", errors="replace") as file_stream:
+					analysis = CAnalising()
+					for line in file_stream:
+						analysis.add(line)
+						pass
+					self._analysis = analysis.get_analising()
+					pass
+				pass
+			else:
+				self._logger.info("no file_selected")
+				pass
+			pass
+		else:
+			self._logger.error("no cmd:"+command)
 			pass
 		self._update_front()
 		pass
@@ -844,7 +853,7 @@ if __name__ == '__main__':
 	test_isEQ(engrave.run("G1 Z1"), "G1 Z5.0")
 
 	test_line()
-	analising = CAnalising("or", "pa")
+	analising = CAnalising()
 	analising.add("G0 X10")
 	analising.add("G1 Y20")
 	print(analising.get_analising())

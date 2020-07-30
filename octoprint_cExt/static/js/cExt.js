@@ -22,6 +22,7 @@ $(function() {
       self.isOperational = ko.observable();
       self.swap_xy = ko.observable();
       self.is_file_selected = ko.observable(false);
+      self.is_file_analysis = ko.observable(false);
       self.is_engrave_avaliable = ko.observable(false);
 
       self.embed_url = ko.observable('');
@@ -80,17 +81,29 @@ $(function() {
             $("#id_probe_state").text(upd.state);
           }
         }
+        
         if((typeof data.file_selected)!='undefined'){
           if(data.file_selected){
             upd=data.file_selected;
-            self.file_selected_width = upd.width;
-            self.file_selected_depth = upd.depth;
             $("#id_file_selected").text(upd.path)
-            $("#id_file_analisys").text(self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm")
             self.is_file_selected(true)
           }else{
             $("#id_file_selected").text(" ");
             self.is_file_selected(false)
+          }
+        }
+
+        if((typeof data.analysis)!='undefined'){
+          if(data.analysis){
+            upd=data.analysis;
+            self.file_selected_width = upd.width;
+            self.file_selected_depth = upd.depth;
+            
+            $("#id_file_analisys").text(" "+self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm")
+            self.is_file_analysis(true)
+          }else{
+            $("#id_file_analisys").text("");
+            self.is_file_analysis(false)
           }
         }
 
@@ -175,14 +188,14 @@ $(function() {
       self.probe(_distanse,feed)
     }
 //-----------------------------------------------------------
-    self.engrave=function() {
+    self.send_single_cmd=function(cmd) {
       //  console.log((new Error().stack));
         $.ajax({
             url: API_BASEURL + "plugin/cExt",
             type: "POST",
             dataType: "json",
             data: JSON.stringify({
-                command: "engrave"
+                command: cmd
             }),
             contentType: "application/json; charset=UTF-8"
         });
@@ -205,18 +218,7 @@ $(function() {
             contentType: "application/json; charset=UTF-8"
         });
     };
-    self.probe_area_stop=function() {
-        $.ajax({
-            url: API_BASEURL + "plugin/cExt",
-            type: "POST",
-            dataType: "json",
-            data: JSON.stringify({
-                command: "probe_area_stop"
-            }),
-            contentType: "application/json; charset=UTF-8"
-        });
 
-    };
       //rounded to grid
     self.up_to_grid=function(val) {
       _val=parseFloat(val)
