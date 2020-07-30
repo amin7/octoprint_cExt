@@ -21,6 +21,7 @@ $(function() {
 
       self.isOperational = ko.observable();
       self.swap_xy = ko.observable();
+      self.swap_xy_is_set=false
       self.is_file_selected = ko.observable(false);
       self.is_file_analysis = ko.observable(false);
       self.is_engrave_avaliable = ko.observable(false);
@@ -81,7 +82,7 @@ $(function() {
             $("#id_probe_state").text(upd.state);
           }
         }
-        
+
         if((typeof data.file_selected)!='undefined'){
           if(data.file_selected){
             upd=data.file_selected;
@@ -125,6 +126,13 @@ $(function() {
             $("#id_cext_state").text(state);
           }
         }
+        self.swap_xy_is_set=true
+        if((typeof data.swap_xy)!='undefined'){
+          self.swap_xy(data.swap_xy)
+        }else{
+          self.swap_xy(false)
+        }
+        self.swap_xy_is_set=false
       };
 
       self.onTabChange = function(next, current) {
@@ -155,16 +163,18 @@ $(function() {
       }
 
       self.swap_xy.subscribe(function(is_swap) {
-         $.ajax({
-            url: API_BASEURL + "plugin/cExt",
-            type: "POST",
-            dataType: "json",
-            data: JSON.stringify({
-                command: "swap_xy",
-                active: is_swap
-            }),
-            contentType: "application/json; charset=UTF-8"
-        });
+        if(!self.swap_xy_is_set){
+           $.ajax({
+              url: API_BASEURL + "plugin/cExt",
+              type: "POST",
+              dataType: "json",
+              data: JSON.stringify({
+                  command: "swap_xy",
+                  active: is_swap
+              }),
+              contentType: "application/json; charset=UTF-8"
+          });
+        }
       });
 
       self.probe = function(_distanse,_feed) {

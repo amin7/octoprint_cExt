@@ -362,7 +362,7 @@ class CSwapXY:
 	pass
 
 
-class CEngrave:
+class CBedLevelAjust:
 	def __init__(self, bedLevel, offs_X, offs_Y):
 		self._cur_X = 0
 		self._cur_Y = 0
@@ -582,11 +582,11 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		)
 
 	cmdList = None
-	bed_level = None
+	_bed_level = None
 	probe_area_control = None
 	_probe = None
 	_swap_xy = None
-	_engrave = None
+	_bed_level_ajust = None
 	file_selected = None
 	_analysis = None
 
@@ -599,23 +599,28 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		pass
 
 	def on_event(self, event, payload):
-		self._logger.info(event)
-		self._logger.info(payload)
-		# if self.probe_area_control:
-		# 	self.probe_area_control.on_event(event, payload)
+		# self._logger.info(event)
+		# self._logger.info(payload)
 		if (event == 'UserLoggedIn'):
 			self._update_front()
 			pass
-		elif (event == 'FileSelected'):
-			self.bed_level = None
+		elif event == 'FileSelected':
+			self._bed_level = None
 			self._analysis = None
 			self.file_selected = dict(origin=payload['origin'], path=payload['path'])
 			self._update_front()
+			pass
+		elif event == 'PrinterStateChanged':
+			if payload['state_string'] == 'Operational' and self._bed_level_ajust:
+				self._bed_level_ajust = None
+				pass
 			pass
 		pass
 
 	def _update_front(self):
 		data = dict(file_selected=self.file_selected, analysis=self._analysis)
+		if self._swap_xy:
+			data['swap_xy'] = True
 		if self.probe_area_control:
 			self.probe_area_control.on_update_front(data)
 		self._plugin_manager.send_plugin_message(self._identifier, data)
@@ -625,23 +630,18 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		self._plugin_manager.send_plugin_message(self._identifier, data)
 		pass
 
-	# ----------------------------------
-	#                                               pos_x=self._settings.get_int(["probe_offset_x"])+self._settings.get_int(["plate_coner_xy"]),
-	#                                               pos_y=self._settings.get_int(["probe_offset_y"])+self._settings.get_int(["plate_coner_xy"])))
-
-	# --------------------------------------------
 	def gcode_received_hook(self, comm_instance, line, *args, **kwargs):
 		if self.cmdList != None:
 			self.cmdList.processResponce(line)
 		return line
 
 	def gcode_queuing(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):
-		self._logger.info(dict(cmd=cmd, type=cmd_type, gcode=gcode))
+	#	self._logger.info(dict(cmd=cmd, type=cmd_type, gcode=gcode))
 		if self._swap_xy:
 			cmd = self._swap_xy.run(cmd)
 			pass
-		if self._engrave:
-			cmd = self._engrave.run(cmd)
+		if self._bed_level_ajust:
+			cmd = self._bed_level_ajust.run(cmd)
 			pass
 		return cmd
 
@@ -654,17 +654,19 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 					analysis=[])
 
 	def on_api_command(self, command, data):
-		self._logger.info("on_api_command:" + command)
+		self._logger.info("on_api_command:" + command, data)
 		if (command == 'probe_area'):
-			if self.file_selected and self._analysis:
-				self.bed_level = CBedLevel(self.file_selected['width'], self.file_selected['depth'], data['grid'])
-				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self.bed_level)
+			if self._analysis:
+				self._bed_level = CBedLevel(self._analysis['width'], self._analysis['depth'], data['grid'])
+				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self._bed_level)
 				self.probe_area_control.start(data)
+				pass
 			pass
 		if (command == 'probe_area_stop'):
 			if self.probe_area_control:
 				self.probe_area_control.stop()
-				self.bed_level = None
+				self._bed_level = None
+				pass
 			pass
 		elif (command == 'probe'):
 			self._probe = CProbeControl(self.cmdList, self.control_progress_cb, data)
@@ -674,10 +676,12 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				self._swap_xy = CSwapXY()
 			else:
 				self._swap_xy = None
+			self._bed_level = None
 			pass
 		elif (command == 'engrave'):
-			if self.bed_level:
-				self._engrave = CEngrave(self.level, self.file_selected['minX'], self.file_selected['minY'])
+			self._printer.start_print()
+			if self._bed_level and self._analysis:
+				self._bed_level_ajust = CBedLevelAjust(self._bed_level, self._analysis['min']['x'], self._analysis['min']['y'])
 			else:
 				self._logger.info("no bed_level")
 			pass
@@ -847,7 +851,7 @@ if __name__ == '__main__':
 	test_isEQ(dict2gcode(gc), "G13 Y10.2 X1.0 Z23.0 F500.0")
 
 	test_line()
-	engrave = CEngrave(level, 0, 0)
+	engrave = CBedLevelAjust(level, 0, 0)
 	test_isEQ(engrave.run("G1 X0 Y0"), "G1 Y0.0 X0.0 Z0")
 	test_isEQ(engrave.run("G1 X5 Y5"), ['G1 Y2.5 X2.5 Z2.5', 'G1 Y5.0 X5.0 Z4'])
 	test_isEQ(engrave.run("G1 Z1"), "G1 Z5.0")
