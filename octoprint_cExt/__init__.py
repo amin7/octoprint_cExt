@@ -617,7 +617,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			self._update_front()
 			pass
 		elif event == 'PrinterStateChanged':
-			if payload['state'] == 'OPERATIONAL' and self._bed_level_ajust:
+			if payload['state_id'] == 'OPERATIONAL' and self._bed_level_ajust:
 				self._bed_level_ajust = None
 				self._update_front()
 				pass
