@@ -320,10 +320,11 @@ def gcode2dict(gcode):
 		return dict(cmd=None)
 	parsed = dict(cmd=_cmd.group())
 
-	_valX = re.search("X((\d+\.\d+)|(\d+))", gcode)
-	_valY = re.search("Y((\d+\.\d+)|(\d+))", gcode)
-	_valZ = re.search("Z((\d+\.\d+)|(\d+))", gcode)
-	_valF = re.search("F((\d+\.\d+)|(\d+))", gcode)
+	pattern="((-?\d+\.\d+)|(-?\d+))"
+	_valX = re.search("X"+pattern, gcode)
+	_valY = re.search("Y"+pattern, gcode)
+	_valZ = re.search("Z"+pattern, gcode)
+	_valF = re.search("F"+pattern, gcode)
 
 	if _valX:
 		parsed['X'] = float(_valX.group(1))
@@ -451,6 +452,7 @@ class CAnalising:
 	_cur_Y = 0
 	_cur_Z = 0
 	_total_lines = 0
+	_lines_move = 0
 	_min_x = None
 	_min_y = None
 	_min_z = None
@@ -469,6 +471,7 @@ class CAnalising:
 		if _max is None or _max < val:
 			return val
 		return _max
+
 	@staticmethod
 	def __sub(val1, val2):
 		if val1 is None or val2 is None:
@@ -493,6 +496,7 @@ class CAnalising:
 			pass
 		# update pos
 		if g_parsed["cmd"] == "G0" or g_parsed["cmd"] == "G1":
+			self._lines_move += 1
 			if "X" in g_parsed:
 				self._cur_X = g_parsed["X"]
 				pass
@@ -512,7 +516,8 @@ class CAnalising:
 	def get_analising(self):
 		return dict(width=self.__sub(self._max_x, self._min_x), depth=self.__sub(self._max_y, self._min_y),
 					min=dict(x=self._min_x, y=self._min_y, z=self._min_z),
-					max=dict(x=self._max_x, y=self._max_y, z=self._max_z)
+					max=dict(x=self._max_x, y=self._max_y, z=self._max_z),
+					line=dict(total=self._total_lines,move= self._lines_move)
 					)
 
 	pass
@@ -859,6 +864,8 @@ if __name__ == '__main__':
 	test_line()
 	analising = CAnalising()
 	analising.add("G0 X10")
-	analising.add("G1 Y20")
+	analising.add("G1 Y20 Z-1")
 	print(analising.get_analising())
+	test_isEQ(analising.get_analising()['max']['z'], 0)
+	test_isEQ(analising.get_analising()['min']['z'], -1)
 	print("test end ")

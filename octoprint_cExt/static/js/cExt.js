@@ -100,7 +100,7 @@ $(function() {
             self.file_selected_width = upd.width;
             self.file_selected_depth = upd.depth;
             
-            $("#id_file_analisys").text(" "+self.file_selected_width.toFixed(1)+" x "+self.file_selected_depth.toFixed(1)+" mm")
+            $("#id_file_analisys").text(" "+upd.width+"x"+upd.depth+", min("+upd.min.x+"x"+upd.min.y+"), z("+upd.min.z+","+upd.max.z+")")
             self.is_file_analysis(true)
           }else{
             $("#id_file_analisys").text("");
