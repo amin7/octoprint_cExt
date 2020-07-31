@@ -18,6 +18,7 @@ $(function() {
       self.level_delta_z=ko.observable();
       self.z_tool_change=ko.observable();
       self.grid_area=ko.observable();
+      self.probing_state=ko.observable();
 
       self.isOperational = ko.observable();
       self.swap_xy = ko.observable();
@@ -79,7 +80,7 @@ $(function() {
         if((typeof data.CProbeControl)!='undefined'){
           upd=data.CProbeControl;
           if((typeof upd.state)!='undefined'){
-            $("#id_probe_state").text(upd.state);
+            self.probing_state(upd.state);
           }
         }
 

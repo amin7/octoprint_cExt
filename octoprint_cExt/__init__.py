@@ -136,7 +136,7 @@ class CBedLevel:
 	# public
 
 	def set(self, index, z_height):
-		self.m_ZheighArray[self.get_i_x(index)][self.get_i_y(index)] = z_height;
+		self.m_ZheighArray[self.get_i_x(index)][self.get_i_y(index)] = float(z_height);
 
 	def get_count(self):
 		if math.isnan(self.m_sizeX) or math.isnan(self.m_sizeY) or math.isnan(self.m_grid):
@@ -278,7 +278,7 @@ class CProbeControl:
 	def __init__(self, cmdList, progress_cb, data):
 		self.cmdList = cmdList
 		self.progress_cb = progress_cb
-		self._report(dict(state='probing'))
+		self._report(dict(state='probing {dist}'.format(dist=-1 * data["distanse"])))
 		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING)
 		# fast probe
 		self.cmdList.addGCode(GCODE_PROBE_DOWN.format(feed=data["feed"], dist=-1 * data["distanse"]),
@@ -678,8 +678,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		if command == 'probe_area_stop':
 			if self.probe_area_control:
 				self.probe_area_control.stop()
-				self._bed_level = None
 				pass
+			self._bed_level = None
+			self._bed_level_ajust = None
 			pass
 		elif command == 'probe':
 			self._probe = CProbeControl(self.cmdList, self.control_progress_cb, data)

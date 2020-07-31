@@ -11,7 +11,6 @@
     	<label class="checkbox"><input type="checkbox"data-bind="checked: swap_xy" >swap_xy</label>    	
         <button class="btn btn-warning" type="button" data-bind="enable: is_file_analysis, click: probe_area" style="width:40%">Probe Area</button>
     	<button class="btn btn-primary" type="button" data-bind="enable: is_engrave_avaliable, click: function(){send_single_cmd('engrave')}" style="width:40%">Engrave</button>
-        <button class="btn btn-primary" type="button" data-bind="click: function(){send_single_cmd('engrave')}" style="width:40%">Engrave_test</button>
         <button class="btn btn-secondary btn-block" data-bind="click: function(){send_single_cmd('probe_area_stop')}">Cancel/Stop</button>
     	<hr>        
         <button class="btn btn-dark btn-block" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPosition000); }">Set (0)</button>
@@ -25,6 +24,7 @@
         <hr>  
         <button class="btn btn-warning col-sm" type="button" data-bind="click: function() {probe_threshold(z_travel(),speed_probe_fast());}">Probe</button>
         <button class="btn btn-warning col-sm" type="button" data-bind="click: function() {z_hop(z_travel());}">z_hop</button>
+        <span data-bind="text:probing_state "></span>
         <div class="w-100"></div> 
         <input type="number" id="id_z_tool_change" min="1" data-bind="value: z_tool_change()">
         <button class="btn btn-info col-sm" type="button" data-bind="click: function() {probe_threshold($('#id_z_tool_change').val(),speed_probe_fast());}">ToolChange_Probe</button>
