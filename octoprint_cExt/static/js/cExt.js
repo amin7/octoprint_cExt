@@ -97,10 +97,10 @@ $(function() {
         if((typeof data.analysis)!='undefined'){
           if(data.analysis){
             upd=data.analysis;
-            self.file_selected_width = upd.width;
-            self.file_selected_depth = upd.depth;
+            self.file_selected_width = parseFloat(upd.width);
+            self.file_selected_depth = parseFloat(upd.depth);
             
-            $("#id_file_analisys").text(" "+upd.width+"x"+upd.depth+", min("+upd.min.x+"x"+upd.min.y+"), z("+upd.min.z+","+upd.max.z+")")
+            $("#id_file_analisys").text(" size("+upd.width.toFixed(2)+"x"+upd.depth.toFixed(2)+"), ofset("+upd.min.x.toFixed(2)+"x"+upd.min.y.toFixed(2)+"), z("+upd.min.z.toFixed(2)+","+upd.max.z.toFixed(2)+")")
             self.is_file_analysis(true)
           }else{
             $("#id_file_analisys").text("");

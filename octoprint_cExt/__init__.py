@@ -13,6 +13,8 @@ import re
 import io
 import math
 from collections import deque
+import flask
+import octoprint.printer
 
 # -------------- const
 GCODE_AUTO_HOME = 'G28'
@@ -26,7 +28,9 @@ GCODE_MOVE_Z = "G0 F{feed} Z{dist}"
 GCODE_SET_POS_000 = "G92 X0 Y0 Z0"
 GCODE_SET_POS_00Z = "G92 X0 Y0 Z{pos_z}"
 
+HTTP_Precondition_Failed = 412
 
+#------------------------
 class CCmdList:
 	def __init__(self, sendGCode):
 		self.sendGCode = sendGCode
@@ -263,9 +267,6 @@ class CBedLevelControl:
 							   GCODE_MOVE_Z.format(feed=self.feed_z, dist=self.level_delta_z),
 							   GCODE_MOVE_XY.format(feed=self.feed_xy, pos_x=1, pos_y=1)])
 		self.make_probe()
-		pass
-
-	def engrave(self):
 		pass
 
 	pass
@@ -616,8 +617,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			self._update_front()
 			pass
 		elif event == 'PrinterStateChanged':
-			if payload['state_string'] == 'Operational' and self._bed_level_ajust:
+			if payload['state'] == 'OPERATIONAL' and self._bed_level_ajust:
 				self._bed_level_ajust = None
+				self._update_front()
 				pass
 			pass
 		pass
@@ -626,6 +628,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		data = dict(file_selected=self.file_selected, analysis=self._analysis)
 		if self._swap_xy:
 			data['swap_xy'] = True
+		if self._bed_level_ajust:
+			data['bed_level_ajust'] = True
 		if self.probe_area_control:
 			self.probe_area_control.on_update_front(data)
 		self._plugin_manager.send_plugin_message(self._identifier, data)
@@ -636,7 +640,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		pass
 
 	def gcode_received_hook(self, comm_instance, line, *args, **kwargs):
-		if self.cmdList != None:
+		if self.cmdList is not None:
 			self.cmdList.processResponce(line)
 		return line
 
@@ -660,35 +664,40 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def on_api_command(self, command, data):
 		self._logger.info("on_api_command:" + command, data)
-		if (command == 'probe_area'):
+		response = None
+		if command == 'probe_area':
 			if self._analysis:
 				self._bed_level = CBedLevel(self._analysis['width'], self._analysis['depth'], data['grid'])
 				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self._bed_level)
 				self.probe_area_control.start(data)
 				pass
+			else:
+				response= flask.make_response("no _analysis ", HTTP_Precondition_Failed)
+				pass
 			pass
-		if (command == 'probe_area_stop'):
+		if command == 'probe_area_stop':
 			if self.probe_area_control:
 				self.probe_area_control.stop()
 				self._bed_level = None
 				pass
 			pass
-		elif (command == 'probe'):
+		elif command == 'probe':
 			self._probe = CProbeControl(self.cmdList, self.control_progress_cb, data)
 			pass
-		elif (command == 'swap_xy'):
+		elif command == 'swap_xy':
 			if data['active']:
 				self._swap_xy = CSwapXY()
 			else:
 				self._swap_xy = None
 			self._bed_level = None
 			pass
-		elif (command == 'engrave'):
-			self._printer.start_print()
+		elif command == 'engrave':
 			if self._bed_level and self._analysis:
 				self._bed_level_ajust = CBedLevelAjust(self._bed_level, self._analysis['min']['x'], self._analysis['min']['y'])
+				self._printer.start_print()
 			else:
-				self._logger.info("no bed_level")
+				response= flask.make_response("no _bed_level or _analysis ", HTTP_Precondition_Failed)
+				pass
 			pass
 		elif command == 'analysis':
 			if self.file_selected:
@@ -702,14 +711,14 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 					pass
 				pass
 			else:
-				self._logger.info("no file_selected")
+				response= flask.make_response("no file_selected", HTTP_Precondition_Failed)
 				pass
 			pass
 		else:
 			self._logger.error("no cmd:"+command)
 			pass
 		self._update_front()
-		pass
+		return response
 
 
 # If you want your plugin to be registered within OctoPrint under a different name than what you defined in setup.py
