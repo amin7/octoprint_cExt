@@ -22,12 +22,14 @@
         <div class="w-100"></div> 
         <button class="btn btn-warning btn-block" data-bind="click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe_fast());}" >Goto XY(0)</button>
         <hr>  
+        <button class="btn" data-bind="click:  function() { OctoPrint.control.sendGcode(cmd_SetPositionZ0); }">set Z(0)</button>
         <button class="btn btn-warning col-sm" type="button" data-bind="click: function() {probe_threshold(z_travel(),speed_probe_fast());}">Probe</button>
+        <button class="btn btn-info col-sm" type="button" data-bind="click: function() {probe_threshold($('#id_z_tool_change').val(),speed_probe_fast());}">ToolChange_Probe</button>
+        <button class="btn col-sm" data-bind="click: function() {probe_threshold(z_travel()/2,speed_probe_fine());}">Probe Fine</button>
         <button class="btn btn-warning col-sm" type="button" data-bind="click: function() {z_hop(z_travel());}">z_hop</button>
         <span data-bind="text:probing_state "></span>
         <div class="w-100"></div> 
         <input type="number" id="id_z_tool_change" min="1" data-bind="value: z_tool_change()">
-        <button class="btn btn-info col-sm" type="button" data-bind="click: function() {probe_threshold($('#id_z_tool_change').val(),speed_probe_fast());}">ToolChange_Probe</button>
         <button class="btn btn-info col-sm" type="button" data-bind="click: function() {z_hop($('#id_z_tool_change').val());}">ToolChange_z_hop</button>
     </div>
 </div>

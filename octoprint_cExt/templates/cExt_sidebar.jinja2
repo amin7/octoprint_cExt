@@ -1,7 +1,0 @@
-<div class="row-fluid" id="side_bar_plugin_cExt">
-	<button class="btn" data-bind="click:  function() { OctoPrint.control.sendGcode(cmd_SetPositionZ0); }">set Z(0)</button>
-	<span data-bind="text:probing_state "></span>
-	<button class="btn btn-block" data-bind="click: function() {probe_threshold(z_travel(),speed_probe_fast());}">Probe</button>
-	<button class="btn btn-block" data-bind="click: function() {probe_threshold(z_travel()/2,speed_probe_fine());}">Probe Fine</button>
-	<button class="btn btn-block" data-bind="click: function() {z_hop(parseFloat(z_travel()));}">z_hop</button>
-</div>

@@ -263,6 +263,6 @@ $(function() {
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
         dependencies: [ "settingsViewModel", "printerProfilesViewModel"],
         // Elements to bind to, e.g. #settings_plugin_cExt, #tab_plugin_cExt, ...
-        elements: ["#side_bar_plugin_cExt","#settings_plugin_cExt_form","#navbar_plugin_cExt","#tab_plugin_cExt"]
+        elements: ["#settings_plugin_cExt_form","#navbar_plugin_cExt","#tab_plugin_cExt"]
     });
 });

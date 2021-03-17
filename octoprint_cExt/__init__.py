@@ -561,7 +561,6 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def get_template_configs(self):
 		return [
-			dict(type="sidebar", icon="arrows-alt"),
 			dict(type="settings")
 		]
 

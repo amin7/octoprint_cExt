@@ -1,6 +1,0 @@
-<a class="dropdown-toggle" id="navbarLedDropdown" role="button" data-toggle="dropdown">LED<span class="caret"></span></a>
-<ul class="dropdown-menu" aria-labelledby="navbarLedDropdown">
-	<li><a class="dropdown-item" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode('M150 R255 U255 B255 P255'); }">On</a></li>
-	<li><a class="dropdown-item" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode('M150 R100 U0 B0 P255'); }">Night</a></li>
-	<li><a class="dropdown-item" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode('M150 R0 U0 B0 P0'); }">Off</a></li>
-</ul>
