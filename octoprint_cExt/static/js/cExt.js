@@ -23,11 +23,10 @@ $(function() {
       self.isOperational = ko.observable();
       self.swap_xy = ko.observable();
       self.swap_xy_is_set=false
-      self.is_file_selected = ko.observable(false);
+      self.file_name = ko.observable("");
       self.is_file_analysis = ko.observable(false);
+      self.analysis_data = ko.observable("");
       self.is_engrave_avaliable = ko.observable(false);
-
-      self.embed_url = ko.observable('');
 
       self.file_selected_width=0;
       self.file_selected_depth=0;
@@ -36,7 +35,32 @@ $(function() {
       self.cmd_SetPosition000="G92 X0 Y0 Z0";
       self.cmd_SetPositionZ0="G92 Z0";
       self.cmd_DisableSteppers="M18"
+      self.isActiveTab = ko.observable();
+
+      self.file_name.subscribe(function(newValue) {
+          if(newValue!=""){
+            if(self.isActiveTab()){
+              self.send_single_cmd('analysis');
+            }
+            $("#id_file_analisys").text(", (...)");
+          }
+          self.is_file_analysis(false);
+      });
       
+      self.is_file_analysis.subscribe(function(newValue) {
+        if(!newValue){
+          self.analysis_data("")
+        }
+      });
+
+      self.isActiveTab.subscribe(function(newValue) {
+        if(newValue){
+          if(self.file_name()!="" && self.is_file_analysis()==false){
+            self.send_single_cmd('analysis');
+          }
+        }
+      });
+
       self._upd_settings=function(){
         self.speed_probe_fast(self.settingsViewModel.settings.plugins.cExt.speed_probe_fast());
         self.speed_probe_fine(self.settingsViewModel.settings.plugins.cExt.speed_probe_fine());
@@ -87,11 +111,9 @@ $(function() {
         if((typeof data.file_selected)!='undefined'){
           if(data.file_selected){
             upd=data.file_selected;
-            $("#id_file_selected").text(upd.path)
-            self.is_file_selected(true)
+            self.file_name(upd.path)
           }else{
-            $("#id_file_selected").text(" ");
-            self.is_file_selected(false)
+            self.file_name("")
           }
         }
 
@@ -100,12 +122,8 @@ $(function() {
             upd=data.analysis;
             self.file_selected_width = parseFloat(upd.width);
             self.file_selected_depth = parseFloat(upd.depth);
-            
-            $("#id_file_analisys").text(" size("+upd.width.toFixed(2)+"x"+upd.depth.toFixed(2)+"), ofset("+upd.min.x.toFixed(2)+"x"+upd.min.y.toFixed(2)+"), z("+upd.min.z.toFixed(2)+","+upd.max.z.toFixed(2)+")")
-            self.is_file_analysis(true)
-          }else{
-            $("#id_file_analisys").text("");
-            self.is_file_analysis(false)
+            self.analysis_data("(size("+upd.width.toFixed(2)+"x"+upd.depth.toFixed(2)+"), ofset("+upd.min.x.toFixed(2)+"x"+upd.min.y.toFixed(2)+"), z("+upd.min.z.toFixed(2)+","+upd.max.z.toFixed(2)+"))")
+            self.is_file_analysis(true);
           }
         }
 
@@ -139,9 +157,9 @@ $(function() {
       self.onTabChange = function(next, current) {
         //console.log(next,current);
         if(next == '#tab_plugin_cExt'){
-            self.embed_url(self.settingsViewModel.settings.webcam.streamUrl());
+          self.isActiveTab(true);
         } else {
-            self.embed_url('');
+          self.isActiveTab(false);
         }
       }
 //---------------------------------------------------------
