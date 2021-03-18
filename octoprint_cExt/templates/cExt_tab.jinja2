@@ -1,26 +1,28 @@
 <div class="card">
-	<div id="webcamstreamer_wrapper">
-		<img data-bind="attr: {src: embed_url}" style=" width:100%; height: auto; border: none"></img>
-	</div>
     <div class="card-body"> 
-    	<label>File: <span id="id_file_selected"></span></label>
+    	<label>File: <span id="id_file_selected"></span><span id="id_file_analisys"></span></label>
         <label>grid_area: <span  data-bind="text:grid_area "></span>mm</label>
-        <button class="btn btn-primary" type="button" data-bind="enable: is_file_selected, click: function(){send_single_cmd('analysis')}">Analysis</button> <span id="id_file_analisys"> </span>
     	<div class="w-100"></div> 
     	<span id=id_cext_state></span>
     	<label class="checkbox"><input type="checkbox"data-bind="checked: swap_xy" >swap_xy</label>    	
-        <button class="btn btn-warning" type="button" data-bind="enable: is_file_analysis, click: probe_area" style="width:40%">Probe Area</button>
-    	<button class="btn btn-primary" type="button" data-bind="enable: is_engrave_avaliable, click: function(){send_single_cmd('engrave')}" style="width:40%">Engrave</button>
+        <button class="btn btn-warning" type="button" style="width:48%" data-bind="enable: is_file_analysis, click: probe_area">Probe Area</button>
+        <button class="btn btn-primary" type="button" style="width:48%" data-bind="enable: is_engrave_avaliable, click: function(){send_single_cmd('engrave')}" >Engrave</button>
         <button class="btn btn-secondary btn-block" data-bind="click: function(){send_single_cmd('probe_area_stop')}">Cancel/Stop</button>
+
     	<hr>        
         <button class="btn btn-dark btn-block" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPosition000); }">Set (0)</button>
     	<button class="btn btn-primary btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_DisableSteppers); }" >Motors Off</button>
-        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy(-file_selected_width_grid(),0);}">GotoX -width</button>
-        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy( file_selected_width_grid(),0);}">GotoX +width</button>
-        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy(0,-file_selected_depth_grid());}">GotoY -depth</button>
-        <button class="btn btn-info" type="button" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy(0, file_selected_depth_grid());}">GotoY +depth</button>
-        <div class="w-100"></div> 
+
+        <button class="btn btn-info btn-block" type="button" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy(0, file_selected_depth_grid());}">GotoY +depth</button>        
+        <button class="btn btn-info" type="button" style="width:48%" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy(-file_selected_width_grid(),0);}">GotoX -width</button>
+        <button class="btn btn-info" type="button" style="width:48%" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy( file_selected_width_grid(),0);}">GotoX +width</button>
+        <button class="btn btn-info btn-block" type="button" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy(0,-file_selected_depth_grid());}">GotoY -depth</button>
+
         <button class="btn btn-warning btn-block" data-bind="click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe_fast());}" >Goto XY(0)</button>
+        <hr>
+        <button class="btn btn-warning btn-block" >Delta Steper</button>
+        <input type="number" >
+        <button class="btn btn-warning" >Apply Delta</button>
         <hr>  
         <button class="btn" data-bind="click:  function() { OctoPrint.control.sendGcode(cmd_SetPositionZ0); }">set Z(0)</button>
         <button class="btn btn-warning col-sm" type="button" data-bind="click: function() {probe_threshold(z_travel(),speed_probe_fast());}">Probe</button>
