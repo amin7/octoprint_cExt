@@ -1,11 +1,11 @@
 /*
- * View model for OctoPrint-Cext
+ * View model for OctoPrint-cnc
  *
  * Author: olemin
  * License: AGPLv3
  */
 $(function() {
-    function CextViewModel(parameters) {
+    function cncExtenetionViewModel(parameters) {
       var self = this;
       self.settingsViewModel = parameters[0];
       self.printerProfilesViewModel = parameters[1];
@@ -62,13 +62,14 @@ $(function() {
       });
 
       self._upd_settings=function(){
-        self.speed_probe_fast(self.settingsViewModel.settings.plugins.cExt.speed_probe_fast());
-        self.speed_probe_fine(self.settingsViewModel.settings.plugins.cExt.speed_probe_fine());
-        self.z_threshold(self.settingsViewModel.settings.plugins.cExt.z_threshold());
-        self.z_travel(self.settingsViewModel.settings.plugins.cExt.z_travel());
-        self.level_delta_z(self.settingsViewModel.settings.plugins.cExt.level_delta_z());
-        self.z_tool_change(self.settingsViewModel.settings.plugins.cExt.z_tool_change());
-        self.grid_area(self.settingsViewModel.settings.plugins.cExt.grid_area());
+        plugin_setting=self.settingsViewModel.settings.plugins.cnc_extention;
+        self.speed_probe_fast(plugin_setting.speed_probe_fast());
+        self.speed_probe_fine(plugin_setting.speed_probe_fine());
+        self.z_threshold(plugin_setting.z_threshold());
+        self.z_travel(plugin_setting.z_travel());
+        self.level_delta_z(plugin_setting.level_delta_z());
+        self.z_tool_change(plugin_setting.z_tool_change());
+        self.grid_area(plugin_setting.grid_area());
       }
       self.onBeforeBinding = function() {
         self._upd_settings();
@@ -96,7 +97,7 @@ $(function() {
 
       self.onDataUpdaterPluginMessage = function(plugin, data) {
         console.log(plugin);
-        if (plugin != "cExt") {
+        if (plugin != "cnc_extention") {
             return;
         }
         console.log(data);
@@ -156,7 +157,7 @@ $(function() {
 
       self.onTabChange = function(next, current) {
         //console.log(next,current);
-        if(next == '#tab_plugin_cExt'){
+        if(next == '#tab_plugin_cnc_extention'){
           self.isActiveTab(true);
         } else {
           self.isActiveTab(false);
@@ -184,7 +185,7 @@ $(function() {
       self.swap_xy.subscribe(function(is_swap) {
         if(!self.swap_xy_is_set){
            $.ajax({
-              url: API_BASEURL + "plugin/cExt",
+              url: API_BASEURL + "plugin/cnc_extention",
               type: "POST",
               dataType: "json",
               data: JSON.stringify({
@@ -199,7 +200,7 @@ $(function() {
       self.probe = function(_distanse,_feed) {
         //console.log(_distanse);
         $.ajax({
-            url: API_BASEURL + "plugin/cExt",
+            url: API_BASEURL + "plugin/cnc_extention",
             type: "POST",
             dataType: "json",
             data: JSON.stringify({
@@ -220,7 +221,7 @@ $(function() {
     self.send_single_cmd=function(cmd) {
       //  console.log((new Error().stack));
         $.ajax({
-            url: API_BASEURL + "plugin/cExt",
+            url: API_BASEURL + "plugin/cnc_extention",
             type: "POST",
             dataType: "json",
             data: JSON.stringify({
@@ -233,7 +234,7 @@ $(function() {
     self.probe_area = function() {
      // console.log("probe_area");
         $.ajax({
-            url: API_BASEURL + "plugin/cExt",
+            url: API_BASEURL + "plugin/cnc_extention",
             type: "POST",
             dataType: "json",
             data: JSON.stringify({
@@ -277,10 +278,10 @@ $(function() {
 
      */
     OCTOPRINT_VIEWMODELS.push({
-        construct: CextViewModel,
+        construct: cncExtenetionViewModel,
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
         dependencies: [ "settingsViewModel", "printerProfilesViewModel"],
         // Elements to bind to, e.g. #settings_plugin_cExt, #tab_plugin_cExt, ...
-        elements: ["#settings_plugin_cExt_form","#navbar_plugin_cExt","#tab_plugin_cExt"]
+        elements: ["#settings_plugin_cnc_extention","#navbar_plugin_cnc_extention","#tab_plugin_cnc_extention"]
     });
 });
