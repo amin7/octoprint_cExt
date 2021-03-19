@@ -10,8 +10,6 @@ $(function() {
       self.settingsViewModel = parameters[0];
       self.printerProfilesViewModel = parameters[1];
 
-      self.speed_probe_fast=ko.observable();
-      self.speed_probe_fine=ko.observable();
       self.z_threshold=ko.observable();
       self.z_travel=ko.observable();  
 
@@ -63,8 +61,6 @@ $(function() {
 
       self._upd_settings=function(){
         plugin_setting=self.settingsViewModel.settings.plugins.cnc_extention;
-        self.speed_probe_fast(plugin_setting.speed_probe_fast());
-        self.speed_probe_fine(plugin_setting.speed_probe_fine());
         self.z_threshold(plugin_setting.z_threshold());
         self.z_travel(plugin_setting.z_travel());
         self.level_delta_z(plugin_setting.level_delta_z());
@@ -239,7 +235,7 @@ $(function() {
             dataType: "json",
             data: JSON.stringify({
                 command: "probe_area",
-                feed_probe: self.speed_probe_fast(),
+                feed_probe: self.settingsViewModel.settings.plugins.cnc_extention.speed_probe(),
                 feed_z: self.printerProfilesViewModel.currentProfileData().axes.z.speed(),
                 feed_xy: self.printerProfilesViewModel.currentProfileData().axes.x.speed(),
                 grid: parseInt(self.grid_area()),
