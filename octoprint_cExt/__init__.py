@@ -572,15 +572,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		# for details.
 		return dict(
 			cExt=dict(
-				displayName="cExt Plugin",
+				displayName="cncExtention",
 				displayVersion=self._plugin_version,
-
-				# version check: github repository
-				type="github_release",
-				user="you",
-				repo="octoprint_cExt",
 				current=self._plugin_version,
-
 				# update method: pip
 				pip="https://github.com/you/octoprint_cExt/archive/{target_version}.zip"
 			)
