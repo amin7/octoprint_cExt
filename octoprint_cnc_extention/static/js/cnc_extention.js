@@ -123,6 +123,10 @@ $(function() {
 
             self.putLog("file analised: size("+upd.width.toFixed(2)+"x"+upd.depth.toFixed(2)+"), ofset("+upd.min.x.toFixed(2)+"x"+upd.min.y.toFixed(2)+"), z("+upd.min.z.toFixed(2)+","+upd.max.z.toFixed(2)+"))");
             self.is_file_analysis(true);
+            $("#cnc_extention_Y_p_depth").html("Y+"+self.file_selected_depth_grid())
+            $("#cnc_extention_Y_m_depth").html("Y-"+self.file_selected_depth_grid())
+            $("#cnc_extention_X_p_width").html("X+"+self.file_selected_width_grid())
+            $("#cnc_extention_X_m_width").html("X-"+self.file_selected_width_grid())
           }
         }
 

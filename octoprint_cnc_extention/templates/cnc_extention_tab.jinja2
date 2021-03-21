@@ -17,7 +17,6 @@
     <button class="btn btn-warning btn-block" data-bind="click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe());}" >Goto XY(0)</button>
 	<button class="btn btn-primary btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_DisableSteppers); }" >Motors Off</button>
     <hr>
-    <br>
     <div class="row-fluid">
         <div class="btn-group btn-group-vertical span2">
             <button class="btn btn-warning btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(30,settingsViewModel.settings.plugins.cnc_extention.speed_probe());}">Z-30</button> 
@@ -26,18 +25,18 @@
         </div>
         <div class="span8">
             <div class="span8 offset2"> 
-                <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(0, file_selected_depth_grid());}">Y +depth</button> 
+                <button id="cnc_extention_Y_p_depth" class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(0, file_selected_depth_grid());} ">Y +depth</button> 
             </div>
             <div class="row-fluid">
                 <div class="span6">
-                    <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(-file_selected_width_grid(),0);}">X -width</button>
+                    <button id="cnc_extention_X_m_width" class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(-file_selected_width_grid(),0);}">X -width</button>
                 </div>
                 <div class="span6">
-                    <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy( file_selected_width_grid(),0);}">X +width</button>
+                    <button id="cnc_extention_X_p_width" class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy( file_selected_width_grid(),0);}">X +width</button>
                 </div>
             </div>
             <div class="span8 offset2">
-                <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(0,-file_selected_depth_grid());}">Y -depth</button>
+                <button id="cnc_extention_Y_m_depth" class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(0,-file_selected_depth_grid());}">Y -depth</button>
             </div>
 
         </div>
@@ -49,25 +48,7 @@
     </div>
     <label class="span12"> Probe state: <span data-bind="text:probing_state "></span></label>
     <button class="btn btn-block" data-bind="click:  function() { OctoPrint.control.sendGcode(cmd_SetPositionZ0); }">set Z(0)</button>
-    <div class="row-fluid">
-        <div class="input-append span5">
-            <input class="input-mini text-right" type="number" min="1" value=2>
-            <button class="btn btn-warning" data-bind="click: function() {probe_threshold(z_travel()/2,settingsViewModel.settings.plugins.cnc_extention.speed_probe()/2);}">Probe Fine</button>
-        </div>
-      
-        <div class="input-append span7">
-            <input class="input-mini text-right" type="number" id="id_z_tool_change" min="1" data-bind="value: z_tool_change()">
-            <button class="btn btn-warning btn-block" data-bind="click: function() {probe_threshold(z_tool_change(),settingsViewModel.settings.plugins.cnc_extention.speed_probe);}">ToolChange Probe</button>
-            <button class="btn btn-info btn-block" data-bind="click: function() {z_hop(z_tool_change());}">z_hop</button>
-        </div>
-    </div>
     <form class="form-inline">
-        <div class="input-append ">
-            <input class="input-mini text-right" type="number"  min="1" data-bind="">
-            <div class="add-on">
-                <span class="input-group-text">count</span>
-            </div>
-        </div>
         <div class="input-append ">
             <input class="input-mini text-right" type="number"  min="0.1" data-bind="">
             <div class="add-on">

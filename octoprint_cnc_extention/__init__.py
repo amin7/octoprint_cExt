@@ -748,7 +748,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			for line in file_stream:
 				if transforms:
 					for trans in transforms:
-						line = trans.run(line)
+						if trans:
+							line = trans.run(line)
+							pass
 						pass
 					pass
 				analysis.add(line)
