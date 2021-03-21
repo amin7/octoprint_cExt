@@ -1,17 +1,16 @@
 <div class="tab-pane" >
-	<label>File: <span data-bind="text: file_name()"></span><span data-bind="text: analysis_data()"></span></label>
-    <label>grid_area: <span  data-bind="text:grid_area "></span>mm</label>
+	<label>File: <span data-bind="text: file_name()"></span></label>
+    <textarea id="id_cnc_extention_log" rows="7" style="width:100%;resize:vertical;" readonly ></textarea>
+    <label class="checkbox"><input type="checkbox"data-bind="checked: swap_xy" >swap_xy</label>   
 	<div class="w-100"></div> 
-	<span id=id_cext_state></span>
-	<label class="checkbox"><input type="checkbox"data-bind="checked: swap_xy" >swap_xy</label>    	
     <div class="row-fluid">
         <div class="span6"> 
         <button class="btn btn-warning btn-block"data-bind="enable: is_file_analysis, click: probe_area">Probe Area</button>
         </div>
         <div class="span6"> 
-        <button class="btn btn-primary btn-block" data-bind="enable: is_engrave_avaliable, click: function(){send_single_cmd('engrave')}" >Engrave</button>
+            <button class="btn btn-secondary btn-block" data-bind="click: function(){send_single_cmd('probe_area_stop')}">Probe Cancel/Stop</button>
         </div>
-        <button class="btn btn-secondary btn-block" data-bind="click: function(){send_single_cmd('probe_area_stop')}">Probe Cancel/Stop</button>
+        <button class="btn btn-primary btn-block" data-bind="enable: is_engrave_avaliable, click: function(){send_single_cmd('engrave')}" >Engrave</button>
     </div>
 	<hr>        
     <button class="btn btn-dark btn-block" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPosition000); }">Set (0)</button>
@@ -52,20 +51,29 @@
     <button class="btn btn-block" data-bind="click:  function() { OctoPrint.control.sendGcode(cmd_SetPositionZ0); }">set Z(0)</button>
     <div class="row-fluid">
         <div class="input-append span5">
-            <button class="btn btn-warning" data-bind="click: function() {probe_threshold(z_travel()/2,settingsViewModel.settings.plugins.cnc_extention.speed_probe/2);}">Probe Fine</button>
-            <input class="input-mini text-right" type="number" id="id_z_tool_change" min="1" value=2>
+            <input class="input-mini text-right" type="number" min="1" value=2>
+            <button class="btn btn-warning" data-bind="click: function() {probe_threshold(z_travel()/2,settingsViewModel.settings.plugins.cnc_extention.speed_probe()/2);}">Probe Fine</button>
         </div>
       
         <div class="input-append span7">
-            <button class="btn btn-warning " data-bind="click: function() {probe_threshold(z_tool_change(),settingsViewModel.settings.plugins.cnc_extention.speed_probe);}">ToolChange Probe</button>
             <input class="input-mini text-right" type="number" id="id_z_tool_change" min="1" data-bind="value: z_tool_change()">
-            <button class="btn btn-info" data-bind="click: function() {z_hop(z_tool_change());}">z_hop</button>
+            <button class="btn btn-warning btn-block" data-bind="click: function() {probe_threshold(z_tool_change(),settingsViewModel.settings.plugins.cnc_extention.speed_probe);}">ToolChange Probe</button>
+            <button class="btn btn-info btn-block" data-bind="click: function() {z_hop(z_tool_change());}">z_hop</button>
         </div>
     </div>
-    <hr>
-    <button class="btn btn-warning btn-block" >Delta Steper</button>
-    <div class="input-append span12">
-        <input class="input-mini text-right" type="number" id="id_z_tool_change" min="1" data-bind="value: z_tool_change()">
-        <button class="btn btn-warning" >Apply Delta</button>
-    </div>
+    <form class="form-inline">
+        <div class="input-append ">
+            <input class="input-mini text-right" type="number"  min="1" data-bind="">
+            <div class="add-on">
+                <span class="input-group-text">count</span>
+            </div>
+        </div>
+        <div class="input-append ">
+            <input class="input-mini text-right" type="number"  min="0.1" data-bind="">
+            <div class="add-on">
+                <span class="input-group-text"> tolerance</span>
+            </div>
+        </div>
+        <button class="btn btn-warning btn-fluid" >Ajust Stepper</button>
+    </form>
 </div>

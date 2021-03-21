@@ -20,10 +20,9 @@ $(function() {
 
       self.isOperational = ko.observable();
       self.swap_xy = ko.observable();
-      self.swap_xy_is_set=false
+      self.swap_xy_no_notification=false
       self.file_name = ko.observable("");
       self.is_file_analysis = ko.observable(false);
-      self.analysis_data = ko.observable("");
       self.is_engrave_avaliable = ko.observable(false);
 
       self.file_selected_width=0;
@@ -35,20 +34,30 @@ $(function() {
       self.cmd_DisableSteppers="M18"
       self.isActiveTab = ko.observable();
 
-      self.file_name.subscribe(function(newValue) {
-          if(newValue!=""){
-            if(self.isActiveTab()){
-              self.send_single_cmd('analysis');
-            }
-            $("#id_file_analisys").text(", (...)");
-          }
-          self.is_file_analysis(false);
-      });
-      
-      self.is_file_analysis.subscribe(function(newValue) {
-        if(!newValue){
-          self.analysis_data("")
+      self.putLog=function(event){
+        logs=$("#id_cnc_extention_log");
+        pre=logs.val();
+        if (pre !=""){
+          pre+="\n"
         }
+        logs.val(pre+event);
+        document.getElementById("id_cnc_extention_log").scrollTop = document.getElementById("id_cnc_extention_log").scrollHeight;
+      }
+
+      self.grid_area.subscribe(function(newValue) {
+        self.putLog("grid_area="+newValue+"mm");
+      });
+
+      self.file_name.subscribe(function(filename) {
+        if(filename!=""){
+          if(self.isActiveTab()){
+            self.send_single_cmd('analysis');
+          }
+          self.putLog("select file:"+filename);
+        }else{
+          self.putLog("no file selected");
+        }
+        self.is_file_analysis(false);
       });
 
       self.isActiveTab.subscribe(function(newValue) {
@@ -76,7 +85,8 @@ $(function() {
       }
 
     	self.onStartup = function() {
-    //		$('#control-jog-led').insertAfter('#control-jog-general');
+        //status send automaticaly when user logined in
+
     	}
       self.fromCurrentData = function (data) {
           self._processStateData(data.state);
@@ -102,6 +112,7 @@ $(function() {
           upd=data.CProbeControl;
           if((typeof upd.state)!='undefined'){
             self.probing_state(upd.state);
+            self.putLog(upd.state);
           }
         }
 
@@ -119,7 +130,8 @@ $(function() {
             upd=data.analysis;
             self.file_selected_width = parseFloat(upd.width);
             self.file_selected_depth = parseFloat(upd.depth);
-            self.analysis_data("(size("+upd.width.toFixed(2)+"x"+upd.depth.toFixed(2)+"), ofset("+upd.min.x.toFixed(2)+"x"+upd.min.y.toFixed(2)+"), z("+upd.min.z.toFixed(2)+","+upd.max.z.toFixed(2)+"))")
+
+            self.putLog("file analised: size("+upd.width.toFixed(2)+"x"+upd.depth.toFixed(2)+"), ofset("+upd.min.x.toFixed(2)+"x"+upd.min.y.toFixed(2)+"), z("+upd.min.z.toFixed(2)+","+upd.max.z.toFixed(2)+"))");
             self.is_file_analysis(true);
           }
         }
@@ -139,16 +151,16 @@ $(function() {
             state+="/"+ upd.count
           }
           if(state){
-            $("#id_cext_state").text(state);
+            self.putLog("BedLevel State:"+state);
           }
         }
-        self.swap_xy_is_set=true
+        self.swap_xy_no_notification=true
         if((typeof data.swap_xy)!='undefined'){
           self.swap_xy(data.swap_xy)
         }else{
           self.swap_xy(false)
         }
-        self.swap_xy_is_set=false
+        self.swap_xy_no_notification=false
       };
 
       self.onTabChange = function(next, current) {
@@ -179,7 +191,7 @@ $(function() {
       }
 
       self.swap_xy.subscribe(function(is_swap) {
-        if(!self.swap_xy_is_set){
+        if(!self.swap_xy_no_notification){
            $.ajax({
               url: API_BASEURL + "plugin/cnc_extention",
               type: "POST",

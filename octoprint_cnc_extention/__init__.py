@@ -304,7 +304,7 @@ class CProbeControl:
 							 line)
 			if (match):
 				result = "Probe Done Z:{zpos}".format(zpos=match.group('val_z'));
-				self._report(dict(state=result))
+				self._report(dict(state=result,zpos=match.group('val_z')))
 				self.cmdList.addGCode("M117 " + result);
 				return
 		self._report(dict(state='err_pos', response=response))
@@ -600,28 +600,28 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		# self._logger.info(event)
 		# self._logger.info(payload)
 		if (event == 'UserLoggedIn'):
-			self._update_front()
+			self._update_front() #update status on front
 			pass
 		elif event == 'FileSelected':
 			self._bed_level = None
 			self._analysis = None
 			self.file_selected = dict(origin=payload['origin'], path=payload['path'])
-			self._update_front()
+			data = dict(file_selected=self.file_selected, analysis=self._analysis)
+			self._plugin_manager.send_plugin_message(self._identifier, data)
 			pass
 		elif event == 'PrinterStateChanged':
 			if payload['state_id'] == 'OPERATIONAL' and self._bed_level_ajust:
 				self._bed_level_ajust = None
-				self._update_front()
+				self._plugin_manager.send_plugin_message(self._identifier, dict(bed_level_ajust = False))
 				pass
 			pass
 		pass
 
 	def _update_front(self):
 		data = dict(file_selected=self.file_selected, analysis=self._analysis)
-		if self._swap_xy:
-			data['swap_xy'] = True
-		if self._bed_level_ajust:
-			data['bed_level_ajust'] = True
+		data['swap_xy'] = True if self.swap_xy else False
+		data['bed_level_ajust'] = True if self._bed_level_ajust else False
+
 		if self.probe_area_control:
 			self.probe_area_control.on_update_front(data)
 		self._plugin_manager.send_plugin_message(self._identifier, data)
@@ -652,7 +652,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 					probe_area_stop=[],
 					swap_xy=['active'],
 					engrave=[],
-					analysis=[])
+					analysis=[],
+					status=[])
 
 	def on_api_command(self, command, data):
 		self._logger.info("on_api_command:" + command, data)
@@ -701,16 +702,19 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 						analysis.add(line)
 						pass
 					self._analysis = analysis.get_analising()
+					self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))
 					pass
 				pass
 			else:
 				response= flask.make_response("no file_selected", HTTP_Precondition_Failed)
 				pass
 			pass
+		elif command == 'status':
+			self._update_front()
+			pass
 		else:
 			self._logger.error("no cmd:"+command)
 			pass
-		self._update_front()
 		return response
 
 
