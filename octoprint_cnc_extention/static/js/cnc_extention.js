@@ -7,6 +7,7 @@
 $(function() {
     function cncExtenetionViewModel(parameters) {
       var self = this;
+      self.tab_name="#tab_plugin_cnc_extention";
       self.settingsViewModel = parameters[0];
       self.printerProfilesViewModel = parameters[1];
 
@@ -19,8 +20,6 @@ $(function() {
       self.probing_state=ko.observable();
 
       self.isOperational = ko.observable();
-      self.swap_xy = ko.observable();
-      self.swap_xy_no_notification=false
       self.file_name = ko.observable("");
       self.is_file_analysis = ko.observable(false);
       self.is_engrave_avaliable = ko.observable(false);
@@ -32,7 +31,6 @@ $(function() {
       self.cmd_SetPosition000="G92 X0 Y0 Z0";
       self.cmd_SetPositionZ0="G92 Z0";
       self.cmd_DisableSteppers="M18"
-      self.isActiveTab = ko.observable();
 
       self.putLog=function(event){
         logs=$("#id_cnc_extention_log");
@@ -46,26 +44,18 @@ $(function() {
 
       self.grid_area.subscribe(function(newValue) {
         self.putLog("grid_area="+newValue+"mm");
+        self.is_file_analysis(false);
+        self.is_engrave_avaliable(false);
       });
 
       self.file_name.subscribe(function(filename) {
         if(filename!=""){
-          if(self.isActiveTab()){
-            self.send_single_cmd('analysis');
-          }
           self.putLog("select file:"+filename);
         }else{
           self.putLog("no file selected");
         }
         self.is_file_analysis(false);
-      });
-
-      self.isActiveTab.subscribe(function(newValue) {
-        if(newValue){
-          if(self.file_name()!="" && self.is_file_analysis()==false){
-            self.send_single_cmd('analysis');
-          }
-        }
+        self.is_engrave_avaliable(false);
       });
 
       self._upd_settings=function(){
@@ -138,38 +128,27 @@ $(function() {
 
         if((typeof data.CBedLevelControl)!='undefined'){
           upd=data.CBedLevelControl;
-          let state=""
-
-          if((typeof upd.state)!='undefined'){
-            state+=upd.state
-            self.is_engrave_avaliable(upd.state=="Done")
-          }
-          if((typeof upd.step)!='undefined'){
-            state+=" "+ upd.step
-          }
-          if((typeof upd.count)!='undefined'){
-            state+="/"+ upd.count
-          }
-          if(state){
-            self.putLog("BedLevel State:"+state);
+          if (upd.state==="Init"){
+            self.is_engrave_avaliable(false);
+            self.putLog("probe_area state="+upd.state+",count="+upd.count);
+          }else if (upd.state==="Progress"){
+            self.putLog("probe_area state"+upd.state+" "+upd.step+"/"+upd.count);
+          }else if (upd.state==="Done"){
+              self.is_engrave_avaliable(true);
+          }else{
+            self.putLog("probe_area state="+upd.state+", payload="+JSON.stringify(upd));
           }
         }
-        self.swap_xy_no_notification=true
-        if((typeof data.swap_xy)!='undefined'){
-          self.swap_xy(data.swap_xy)
-        }else{
-          self.swap_xy(false)
-        }
-        self.swap_xy_no_notification=false
       };
 
       self.onTabChange = function(next, current) {
         //console.log(next,current);
-        if(next == '#tab_plugin_cnc_extention'){
-          self.isActiveTab(true);
-        } else {
-          self.isActiveTab(false);
-        }
+        if(next === self.tab_name){
+          self.send_single_cmd('tab_activate');
+        } 
+        if(current === self.tab_name){
+          self.send_single_cmd('tab_deactivate');
+        }     
       }
 //---------------------------------------------------------
           // assign the injected parameters, e.g.:
@@ -189,21 +168,6 @@ $(function() {
     //    console.log(self.printerProfilesViewModel.currentProfileData());
         OctoPrint.control.sendGcode([self.cmd_RelativePositioning,"G0 Z"+distance+" F"+self.printerProfilesViewModel.currentProfileData().axes.z.speed()]);
       }
-
-      self.swap_xy.subscribe(function(is_swap) {
-        if(!self.swap_xy_no_notification){
-           $.ajax({
-              url: API_BASEURL + "plugin/cnc_extention",
-              type: "POST",
-              dataType: "json",
-              data: JSON.stringify({
-                  command: "swap_xy",
-                  active: is_swap
-              }),
-              contentType: "application/json; charset=UTF-8"
-          });
-        }
-      });
 
       self.probe = function(_distanse,_feed) {
         //console.log(_distanse);
@@ -227,7 +191,8 @@ $(function() {
     }
 //-----------------------------------------------------------
     self.send_single_cmd=function(cmd) {
-      //  console.log((new Error().stack));
+      console.log("send_single_cmd="+cmd)
+   //     console.log((new Error().stack));
         $.ajax({
             url: API_BASEURL + "plugin/cnc_extention",
             type: "POST",

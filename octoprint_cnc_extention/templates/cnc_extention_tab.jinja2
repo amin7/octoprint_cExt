@@ -1,43 +1,43 @@
 <div class="tab-pane" >
 	<label>File: <span data-bind="text: file_name()"></span></label>
     <textarea id="id_cnc_extention_log" rows="7" style="width:100%;resize:vertical;" readonly ></textarea>
-    <label class="checkbox"><input type="checkbox"data-bind="checked: swap_xy" >swap_xy</label>   
+    <button class="btn btn-warning btn-block" data-bind="enable: is_file_analysis(), click:function(){send_single_cmd('swap_xy')}">swap_xy</button>
 	<div class="w-100"></div> 
     <div class="row-fluid">
         <div class="span6"> 
-        <button class="btn btn-warning btn-block"data-bind="enable: is_file_analysis, click: probe_area">Probe Area</button>
+        <button class="btn btn-warning btn-block"data-bind="enable: is_file_analysis(), click: probe_area">Probe Area</button>
         </div>
         <div class="span6"> 
             <button class="btn btn-secondary btn-block" data-bind="click: function(){send_single_cmd('probe_area_stop')}">Probe Cancel/Stop</button>
         </div>
-        <button class="btn btn-primary btn-block" data-bind="enable: is_engrave_avaliable, click: function(){send_single_cmd('engrave')}" >Engrave</button>
+        <button class="btn btn-primary btn-block" data-bind="enable: is_engrave_avaliable(), click: function(){send_single_cmd('engrave')}" >Engrave</button>
     </div>
 	<hr>        
     <button class="btn btn-dark btn-block" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPosition000); }">Set (0)</button>
-    <button class="btn btn-warning btn-block" data-bind="click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe_fast());}" >Goto XY(0)</button>
+    <button class="btn btn-warning btn-block" data-bind="click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe());}" >Goto XY(0)</button>
 	<button class="btn btn-primary btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_DisableSteppers); }" >Motors Off</button>
     <hr>
     <br>
     <div class="row-fluid">
         <div class="btn-group btn-group-vertical span2">
-            <button class="btn btn-warning btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(30,settingsViewModel.settings.plugins.cnc_extention.speed_probe);}">Z-30</button> 
-            <button class="btn btn-warning btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(15,settingsViewModel.settings.plugins.cnc_extention.speed_probe);}">Z-15</button> 
-            <button class="btn btn-warning btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(5,settingsViewModel.settings.plugins.cnc_extention.speed_probe);}">Z-5</button> 
+            <button class="btn btn-warning btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(30,settingsViewModel.settings.plugins.cnc_extention.speed_probe());}">Z-30</button> 
+            <button class="btn btn-warning btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(15,settingsViewModel.settings.plugins.cnc_extention.speed_probe());}">Z-15</button> 
+            <button class="btn btn-warning btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(5,settingsViewModel.settings.plugins.cnc_extention.speed_probe());}">Z-5</button> 
         </div>
         <div class="span8">
             <div class="span8 offset2"> 
-                <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy(0, file_selected_depth_grid());}">Y +depth</button> 
+                <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(0, file_selected_depth_grid());}">Y +depth</button> 
             </div>
             <div class="row-fluid">
                 <div class="span6">
-                    <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy(-file_selected_width_grid(),0);}">X -width</button>
+                    <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(-file_selected_width_grid(),0);}">X -width</button>
                 </div>
                 <div class="span6">
-                    <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy( file_selected_width_grid(),0);}">X +width</button>
+                    <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy( file_selected_width_grid(),0);}">X +width</button>
                 </div>
             </div>
             <div class="span8 offset2">
-                <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis, click: function() {relative_move_xy(0,-file_selected_depth_grid());}">Y -depth</button>
+                <button class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(0,-file_selected_depth_grid());}">Y -depth</button>
             </div>
 
         </div>

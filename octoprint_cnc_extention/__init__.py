@@ -192,18 +192,18 @@ class CBedLevelControl:
 																	 count=self.bedLevel.get_count()));
 		pass
 
-	def on_error(self, err, payload=None):
-		self._state = err
-		self._report(dict(state=self._state, payload=payload))
+	def on_error(self, details):
+		self._state = "Error"
+		self._report(dict(state=self._state, details=details))
 		self.cmdList.clearCommandList()
-		self.cmdList.addGCode(["M117 Err:{state}".format(state=self._state), GCODE_RELATIVEPOSITIONING,
+		self.cmdList.addGCode(["M117 Err:{details}".format(details=details), GCODE_RELATIVEPOSITIONING,
 							   GCODE_MOVE_Z.format(feed=self.feed_z, dist=self.level_delta_z)])
 		pass
 
 	def probe_cb_stop_on_error(self, response):
 		for line in response:
 			if line.startswith("Error:Failed to reach target"):
-				self.on_error("Error:Failed to reach target");
+				self.on_error("Failed to reach target");
 				pass
 			pass
 		pass
@@ -216,18 +216,27 @@ class CBedLevelControl:
 				zpos = 0
 				if (self.probe_area_step):
 					zpos = match.group('val_z')
+					pass
 				else:
 					self.cmdList.addGCode(GCODE_SET_POS_00Z.format(pos_z=self.level_delta_z))  # aftre probe heigh
+					pass
 				self.bedLevel.set(self.probe_area_step, zpos);
 				self.probe_area_step += 1;
 				if (self.probe_area_step < self.bedLevel.get_count()):
 					self.make_probe()
 					self.on_progress("Progress")
+					pass
 				else:
-					self.on_progress("Done", self.bedLevel.m_ZheighArray)
+					self._state="Done";
+					self._report(dict(state=self._state, zHeigh=self.bedLevel.m_ZheighArray));
+					self.cmdList.addGCode("M117 ProbeArea Done");
+					if self._on_done:
+						self._on_done()
+						pass
+					pass
 				return
 			pass
-		self.on_error("err pos", response)
+		self.on_error(response)
 		pass
 
 	def make_probe(self):
@@ -255,12 +264,13 @@ class CBedLevelControl:
 		self._report(dict(state=self._state))
 		pass
 
-	def start(self, data):
+	def start(self, data, on_done =None):
 		self.probe_area_step = 0
 		self.feed_probe = data['feed_probe']
 		self.feed_z = data['feed_z']
 		self.feed_xy = data['feed_xy']
 		self.level_delta_z = data['level_delta_z']
+		self._on_done= on_done
 		self.on_progress("Init")
 		# preinit
 		self.cmdList.addGCode([GCODE_SET_POS_000, GCODE_RELATIVEPOSITIONING,
@@ -278,7 +288,7 @@ class CProbeControl:
 	def __init__(self, cmdList, progress_cb, data):
 		self.cmdList = cmdList
 		self.progress_cb = progress_cb
-		self._report(dict(state='probing {dist}'.format(dist=-1 * data["distanse"])))
+		self._report(dict(state='probing {dist}, {feed} mm/s'.format(dist=-1 * data["distanse"],feed=data["feed"])))
 		self.cmdList.addGCode(GCODE_RELATIVEPOSITIONING)
 		# fast probe
 		self.cmdList.addGCode(GCODE_PROBE_DOWN.format(feed=data["feed"], dist=-1 * data["distanse"]),
@@ -359,8 +369,7 @@ class CSwapXY:
 					i = 'X'
 				_cmd += i
 			return _cmd
-		pass
-
+		return cmd #nothing to change	    
 	pass
 
 
@@ -587,6 +596,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	_bed_level_ajust = None
 	file_selected = None
 	_analysis = None
+	_is_tab_active=False
 
 	def on_after_startup(self):
 		self._logger.info("PluginA starting up")
@@ -597,31 +607,34 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		pass
 
 	def on_event(self, event, payload):
-		# self._logger.info(event)
-		# self._logger.info(payload)
+		self._logger.info(event)
+		self._logger.info(payload)
 		if (event == 'UserLoggedIn'):
 			self._update_front() #update status on front
 			pass
 		elif event == 'FileSelected':
+			self.file_selected = dict(origin=payload['origin'], path=payload['path'])
+			self._swap_xy = None # no need to send
 			self._bed_level = None
 			self._analysis = None
-			self.file_selected = dict(origin=payload['origin'], path=payload['path'])
-			data = dict(file_selected=self.file_selected, analysis=self._analysis)
+			data = dict(file_selected=self.file_selected)
 			self._plugin_manager.send_plugin_message(self._identifier, data)
+			if self._is_tab_active:
+				self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],None)
+		 		self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))		
+				pass
 			pass
 		elif event == 'PrinterStateChanged':
-			if payload['state_id'] == 'OPERATIONAL' and self._bed_level_ajust:
-				self._bed_level_ajust = None
-				self._plugin_manager.send_plugin_message(self._identifier, dict(bed_level_ajust = False))
-				pass
+			# if payload['state_id'] == 'OPERATIONAL' and self._bed_level_ajust:
+			# 	self._bed_level_ajust = None
+			# 	self._plugin_manager.send_plugin_message(self._identifier, dict(bed_level_ajust = False))
+			# 	pass
 			pass
 		pass
 
 	def _update_front(self):
 		data = dict(file_selected=self.file_selected, analysis=self._analysis)
-		data['swap_xy'] = True if self.swap_xy else False
 		data['bed_level_ajust'] = True if self._bed_level_ajust else False
-
 		if self.probe_area_control:
 			self.probe_area_control.on_update_front(data)
 		self._plugin_manager.send_plugin_message(self._identifier, data)
@@ -650,9 +663,10 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		return dict(probe_area=['feed_probe', 'feed_z', 'feed_xy', 'grid', 'level_delta_z'],
 					probe=['distanse', 'feed'],
 					probe_area_stop=[],
-					swap_xy=['active'],
+					swap_xy=[],
 					engrave=[],
-					analysis=[],
+					tab_activate=[],
+					tab_deactivate=[],
 					status=[])
 
 	def on_api_command(self, command, data):
@@ -679,11 +693,18 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			self._probe = CProbeControl(self.cmdList, self.control_progress_cb, data)
 			pass
 		elif command == 'swap_xy':
-			if data['active']:
-				self._swap_xy = CSwapXY()
-			else:
+			if self._swap_xy:
 				self._swap_xy = None
+			else:
+				self._swap_xy = CSwapXY()
 			self._bed_level = None
+			self._analysis = None
+			data = dict(analysis=self._analysis,bed_level=self._bed_level)
+			self._plugin_manager.send_plugin_message(self._identifier, data)
+	
+			self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],[self._swap_xy])
+	 		self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))		
+
 			pass
 		elif command == 'engrave':
 			if self._bed_level and self._analysis:
@@ -693,22 +714,25 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				response= flask.make_response("no _bed_level or _analysis ", HTTP_Precondition_Failed)
 				pass
 			pass
-		elif command == 'analysis':
-			if self.file_selected:
-				path_on_disk = self._file_manager.path_on_disk(self.file_selected['origin'],self.file_selected['path'])
-				with io.open(path_on_disk, mode='r', encoding="utf-8", errors="replace") as file_stream:
-					analysis = CAnalising()
-					for line in file_stream:
-						analysis.add(line)
-						pass
-					self._analysis = analysis.get_analising()
-					self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))
-					pass
+		elif command == 'tab_activate':
+			self._is_tab_active=True
+			if self.file_selected and self._analysis==None:
+				self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],[self._swap_xy])
+				self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))		
 				pass
-			else:
-				response= flask.make_response("no file_selected", HTTP_Precondition_Failed)
-				pass
-			pass
+			pass 
+		elif command == 'tab_deactivate':
+			self._is_tab_active=False
+			pass 
+		# elif command == 'analysis':
+		# 	if self.file_selected:
+		# 		self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],self._swap_xy,None)
+		# 		self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))
+		# 		pass
+		# 	else:
+		# 		response= flask.make_response("no file_selected", HTTP_Precondition_Failed)
+		# 		pass
+		# 	pass
 		elif command == 'status':
 			self._update_front()
 			pass
@@ -716,6 +740,21 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			self._logger.error("no cmd:"+command)
 			pass
 		return response
+
+	def do_analysis(self, origin, path, transforms):
+		path_on_disk = self._file_manager.path_on_disk(origin,path)
+		with io.open(path_on_disk, mode='r', encoding="utf-8", errors="replace") as file_stream:
+			analysis = CAnalising()
+			for line in file_stream:
+				if transforms:
+					for trans in transforms:
+						line = trans.run(line)
+						pass
+					pass
+				analysis.add(line)
+				pass
+			return analysis.get_analising()
+		return None
 
 
 # Starting with OctoPrint 1.4.0 OctoPrint will also support to run under Python 3 in addition to the deprecated
