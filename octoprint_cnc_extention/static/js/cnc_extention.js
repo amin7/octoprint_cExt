@@ -31,6 +31,7 @@ $(function() {
       self.cmd_SetPosition000="G92 X0 Y0 Z0";
       self.cmd_SetPositionZ0="G92 Z0";
       self.cmd_DisableSteppers="M18"
+      self.cmd_AdjustmentSteppers="M666"
 
       self.putLog=function(event){
         logs=$("#id_cnc_extention_log");
@@ -275,7 +276,12 @@ $(function() {
       };  
     self.file_selected_depth_grid=function() {
       return self.up_to_grid(self.file_selected_depth);
-      };  
+      }; 
+
+    self.steper_ajust=function(){
+      self.putLog("<steper_ajust>");
+      OctoPrint.control.sendGcode(self.cmd_AdjustmentSteppers+" Z"+$("#id_cnc_extention_steper_ajust").val())
+    }
   }//CextViewModel
 
 
