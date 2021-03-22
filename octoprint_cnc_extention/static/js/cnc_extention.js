@@ -65,6 +65,12 @@ $(function() {
         self.level_delta_z(plugin_setting.level_delta_z());
         self.z_tool_change(plugin_setting.z_tool_change());
         self.grid_area(plugin_setting.grid_area());
+        $("#cnc_extention_Z_p_min").html("Z+"+plugin_setting.preset_z_min())
+        $("#cnc_extention_Z_p_mid").html("Z+"+plugin_setting.preset_z_mid())
+        $("#cnc_extention_Z_p_hi").html("Z+"+plugin_setting.preset_z_hi())
+        $("#cnc_extention_Z_m_min").html("Z-"+plugin_setting.preset_z_min())
+        $("#cnc_extention_Z_m_mid").html("Z-"+plugin_setting.preset_z_mid())
+        $("#cnc_extention_Z_m_hi").html("Z-"+plugin_setting.preset_z_hi())
       }
       self.onBeforeBinding = function() {
         self._upd_settings();
@@ -91,12 +97,22 @@ $(function() {
         self.isOperational(data.flags.operational);
       };
 
+      self._padSpaces=function (str,pad){
+        len= str.length
+        tt=""
+        while(len<pad){
+          len++;
+          tt+=' '
+        }
+        return tt+str
+      }
+
       self.onDataUpdaterPluginMessage = function(plugin, data) {
         console.log(plugin);
         if (plugin != "cnc_extention") {
             return;
         }
-        console.log(data);
+      //  console.log(data);
 
         if((typeof data.CProbeControl)!='undefined'){
           upd=data.CProbeControl;
@@ -130,7 +146,11 @@ $(function() {
           }
         }
 
-        if((typeof data.CBedLevelControl)!='undefined'){
+        if((typeof data.is_engrave_ready)!='undefined'){
+          self.is_engrave_avaliable(data.is_engrave_ready);
+        }
+
+        if((typeof data.CBedLevelControl)!='undefined' && data.CBedLevelControl){
           upd=data.CBedLevelControl;
           if (upd.state==="Init"){
             self.is_engrave_avaliable(false);
@@ -138,7 +158,22 @@ $(function() {
           }else if (upd.state==="Progress"){
             self.putLog("probe_area state"+upd.state+" "+upd.step+"/"+upd.count);
           }else if (upd.state==="Done"){
-              self.is_engrave_avaliable(true);
+            self.putLog("probe_area done, map");
+            iRows=upd.zHeigh.length;
+            zHeighLog=""
+            while(iRows){
+              iRows--;
+              zHeighLog+=self._padSpaces('<'+iRows*self.grid_area()+'>',5);
+              upd.zHeigh[iRows].forEach(function(item){
+                zHeighLog+=self._padSpaces(item.toFixed(2),8);
+              })
+              zHeighLog+='\n'
+            }
+            zHeighLog+=self._padSpaces('',5);
+            upd.zHeigh[0].forEach(function(item,index){
+                zHeighLog+=self._padSpaces('<'+index*self.grid_area()+'>',8);
+              })
+            self.putLog(zHeighLog);
           }else{
             self.putLog("probe_area state="+upd.state+", payload="+JSON.stringify(upd));
           }
@@ -195,7 +230,8 @@ $(function() {
     }
 //-----------------------------------------------------------
     self.send_single_cmd=function(cmd) {
-      console.log("send_single_cmd="+cmd)
+  //    console.log("send_single_cmd="+cmd)
+      self.putLog("<"+cmd+">");
    //     console.log((new Error().stack));
         $.ajax({
             url: API_BASEURL + "plugin/cnc_extention",

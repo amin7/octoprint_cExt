@@ -181,7 +181,10 @@ class CBedLevelControl:
 		self.progress_cb(dict(CBedLevelControl=data))
 
 	def on_update_front(self, data):
-		data['CBedLevelControl'] = dict(step=self.probe_area_step, count=self.bedLevel.get_count(), state=self._state)
+		status = dict(step=self.probe_area_step, count=self.bedLevel.get_count(), state=self._state)
+		if self._state is "Done":
+			status['zHeigh']=self.bedLevel.m_ZheighArray;
+		data['CBedLevelControl'] = status
 		pass
 
 	def on_progress(self, state, payload=None):
@@ -597,6 +600,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	file_selected = None
 	_analysis = None
 	_is_tab_active=False
+	_is_engrave_ready=False
 
 	def on_after_startup(self):
 		self._logger.info("PluginA starting up")
@@ -617,9 +621,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			self._swap_xy = None # no need to send
 			self._bed_level = None
 			self._analysis = None
-			data = dict(file_selected=self.file_selected)
-			self._plugin_manager.send_plugin_message(self._identifier, data)
-			if self._is_tab_active:
+			self._is_engrave_ready=False
+			self._update_front()
+			if self._is_tab_active: # improve performance
 				self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],None)
 		 		self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))		
 				pass
@@ -633,15 +637,23 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		pass
 
 	def _update_front(self):
-		data = dict(file_selected=self.file_selected, analysis=self._analysis)
+		data = dict(file_selected=self.file_selected, analysis=self._analysis,is_engrave_ready=self._is_engrave_ready)
 		data['bed_level_ajust'] = True if self._bed_level_ajust else False
 		if self.probe_area_control:
 			self.probe_area_control.on_update_front(data)
+		else:
+			data['CBedLevelControl'] = None
 		self._plugin_manager.send_plugin_message(self._identifier, data)
 		pass
 
 	def control_progress_cb(self, data):
 		self._plugin_manager.send_plugin_message(self._identifier, data)
+		pass
+
+	def on_aftrer_probe_area_done(self):
+		analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],[self._swap_xy])	
+		self._is_engrave_ready=True
+		self._plugin_manager.send_plugin_message(self._identifier, dict(is_engrave_ready=self._is_engrave_ready,analysis = analysis))
 		pass
 
 	def gcode_received_hook(self, comm_instance, line, *args, **kwargs):
@@ -651,10 +663,10 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def gcode_queuing(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):
 	#	self._logger.info(dict(cmd=cmd, type=cmd_type, gcode=gcode))
-		if self._swap_xy:
-			cmd = self._swap_xy.run(cmd)
-			pass
-		if self._bed_level_ajust:
+		if self._bed_level_ajust: #engarve active
+			if self._swap_xy:
+				cmd = self._swap_xy.run(cmd)
+				pass
 			cmd = self._bed_level_ajust.run(cmd)
 			pass
 		return cmd
@@ -663,6 +675,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		return dict(probe_area=['feed_probe', 'feed_z', 'feed_xy', 'grid', 'level_delta_z'],
 					probe=['distanse', 'feed'],
 					probe_area_stop=[],
+					probe_area_skip=[],
 					swap_xy=[],
 					engrave=[],
 					tab_activate=[],
@@ -674,9 +687,10 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		response = None
 		if command == 'probe_area':
 			if self._analysis:
+				self._is_engrave_ready=False
 				self._bed_level = CBedLevel(self._analysis['width'], self._analysis['depth'], data['grid'])
 				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self._bed_level)
-				self.probe_area_control.start(data)
+				self.probe_area_control.start(data,self.on_aftrer_probe_area_done)
 				pass
 			else:
 				response= flask.make_response("no _analysis ", HTTP_Precondition_Failed)
@@ -688,6 +702,17 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				pass
 			self._bed_level = None
 			self._bed_level_ajust = None
+			self._is_engrave_ready = False
+			self._plugin_manager.send_plugin_message(self._identifier, dict(is_engrave_ready=self._is_engrave_ready))
+			pass
+		elif command == 'probe_area_skip':
+			if self._analysis:
+				self._is_engrave_ready = True
+				self._plugin_manager.send_plugin_message(self._identifier, dict(is_engrave_ready=self._is_engrave_ready))
+				pass
+			else:
+				response= flask.make_response("no _analysis ", HTTP_Precondition_Failed)
+				pass
 			pass
 		elif command == 'probe':
 			self._probe = CProbeControl(self.cmdList, self.control_progress_cb, data)
@@ -699,7 +724,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				self._swap_xy = CSwapXY()
 			self._bed_level = None
 			self._analysis = None
-			data = dict(analysis=self._analysis,bed_level=self._bed_level)
+			self._is_engrave_ready= False
+			data = dict(analysis=self._analysis,bed_level=self._bed_level,is_engrave_ready=self._is_engrave_ready)
 			self._plugin_manager.send_plugin_message(self._identifier, data)
 	
 			self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],[self._swap_xy])
@@ -707,11 +733,12 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 			pass
 		elif command == 'engrave':
-			if self._bed_level and self._analysis:
+			if self._is_engrave_ready:
 				self._bed_level_ajust = CBedLevelAjust(self._bed_level, self._analysis['min']['x'], self._analysis['min']['y'])
 				self._printer.start_print()
+				pass
 			else:
-				response= flask.make_response("no _bed_level or _analysis ", HTTP_Precondition_Failed)
+				response= flask.make_response("no _is_engrave_ready ", HTTP_Precondition_Failed)
 				pass
 			pass
 		elif command == 'tab_activate':
@@ -722,17 +749,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				pass
 			pass 
 		elif command == 'tab_deactivate':
-			self._is_tab_active=False
+			self._is_tab_active = False
 			pass 
-		# elif command == 'analysis':
-		# 	if self.file_selected:
-		# 		self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],self._swap_xy,None)
-		# 		self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))
-		# 		pass
-		# 	else:
-		# 		response= flask.make_response("no file_selected", HTTP_Precondition_Failed)
-		# 		pass
-		# 	pass
 		elif command == 'status':
 			self._update_front()
 			pass
