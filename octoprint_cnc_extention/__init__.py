@@ -596,9 +596,11 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	probe_area_control = None
 	_probe = None
 	_swap_xy = None
+	_offset_xy = None 
 	_bed_level_ajust = None
 	file_selected = None
 	_analysis = None
+	_plane = None
 	_is_tab_active=False
 	_is_engrave_ready=False
 
@@ -618,15 +620,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			pass
 		elif event == 'FileSelected':
 			self.file_selected = dict(origin=payload['origin'], path=payload['path'])
-			self._swap_xy = None # no need to send
-			self._bed_level = None
-			self._analysis = None
-			self._is_engrave_ready=False
-			self._update_front()
-			if self._is_tab_active: # improve performance
-				self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],None)
-		 		self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))		
-				pass
+			self._clear_data_file()
+			self._calculate()
 			pass
 		elif event == 'PrinterStateChanged':
 			# if payload['state_id'] == 'OPERATIONAL' and self._bed_level_ajust:
@@ -639,11 +634,64 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	def _update_front(self):
 		data = dict(file_selected=self.file_selected, analysis=self._analysis,is_engrave_ready=self._is_engrave_ready)
 		data['bed_level_ajust'] = True if self._bed_level_ajust else False
+		data['swap_xy'] = self._swap_xy
+		data['offset_xy'] = self._offset_xy
+		data['plane'] = self._plane
+
 		if self.probe_area_control:
 			self.probe_area_control.on_update_front(data)
 		else:
 			data['CBedLevelControl'] = None
 		self._plugin_manager.send_plugin_message(self._identifier, data)
+		pass
+
+	def _clear_data_file(self,data=dict()):
+		self._analysis = None
+		data["analysis"]=None
+		self._clear_data_probe(data)	
+		pass
+
+	def _clear_data_plane(self,data=dict()):
+		self._plane = None
+		data["plane"]=None
+		self._clear_data_probe(data)
+		pass
+	
+	def _clear_data_probe(self,data=dict()):
+		self._bed_level_ajust = None
+		self._is_engrave_ready = False
+		self._bed_level = None
+		data["bed_level"]=False
+		data["bed_level_ajust"]=False
+		data["is_engrave_ready"]=False
+		self._plugin_manager.send_plugin_message(self._identifier, data)	
+		pass
+
+	def _calculate(self):
+		data=dict();
+
+		if self.file_selected and not self._analysis and self._is_tab_active:
+			self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],None)
+	 		data['analysis'] = self._analysis
+	 		# keep plane unchanged
+			pass
+
+		if not self._plane and self._analysis:
+			width=self._analysis['width']
+			depth=self._analysis['depth']
+			if self._offset_xy:
+				width=width+self._offset_xy['x']
+				depth=depth+self._offset_xy['y']
+				pass
+			if self._swap_xy:
+				width,depth=depth,width
+				pass
+			self._plane=dict(width=width,depth=depth)
+			data['plane'] = self._plane	
+			pass 
+
+		if data: # is not empty
+			self._plugin_manager.send_plugin_message(self._identifier, data)	
 		pass
 
 	def control_progress_cb(self, data):
@@ -680,79 +728,69 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 					engrave=[],
 					tab_activate=[],
 					tab_deactivate=[],
-					status=[])
+					status=[],
+					plane_reset=[],
+					apply_xy_offset=[])
 
 	def on_api_command(self, command, data):
 		self._logger.info("on_api_command:" + command, data)
 		response = None
 		if command == 'probe_area':
-			if self._analysis:
+			if self._plane:
 				self._is_engrave_ready=False
-				self._bed_level = CBedLevel(self._analysis['width'], self._analysis['depth'], data['grid'])
+				self._bed_level = CBedLevel(self._plane['width'], self._plane['depth'], data['grid'])
 				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self._bed_level)
 				self.probe_area_control.start(data,self.on_aftrer_probe_area_done)
-				pass
-			else:
-				response= flask.make_response("no _analysis ", HTTP_Precondition_Failed)
 				pass
 			pass
 		if command == 'probe_area_stop':
 			if self.probe_area_control:
 				self.probe_area_control.stop()
 				pass
-			self._bed_level = None
-			self._bed_level_ajust = None
-			self._is_engrave_ready = False
-			self._plugin_manager.send_plugin_message(self._identifier, dict(is_engrave_ready=self._is_engrave_ready))
+			self._clear_data_probe()
 			pass
 		elif command == 'probe_area_skip':
 			if self._analysis:
 				self._is_engrave_ready = True
 				self._plugin_manager.send_plugin_message(self._identifier, dict(is_engrave_ready=self._is_engrave_ready))
 				pass
-			else:
-				response= flask.make_response("no _analysis ", HTTP_Precondition_Failed)
-				pass
 			pass
 		elif command == 'probe':
 			self._probe = CProbeControl(self.cmdList, self.control_progress_cb, data)
-			pass
-		elif command == 'swap_xy':
-			if self._swap_xy:
-				self._swap_xy = None
-			else:
-				self._swap_xy = CSwapXY()
-			self._bed_level = None
-			self._analysis = None
-			self._is_engrave_ready= False
-			data = dict(analysis=self._analysis,bed_level=self._bed_level,is_engrave_ready=self._is_engrave_ready)
-			self._plugin_manager.send_plugin_message(self._identifier, data)
-	
-			self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],[self._swap_xy])
-	 		self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))		
-
 			pass
 		elif command == 'engrave':
 			if self._is_engrave_ready:
 				self._bed_level_ajust = CBedLevelAjust(self._bed_level, self._analysis['min']['x'], self._analysis['min']['y'])
 				self._printer.start_print()
 				pass
-			else:
-				response= flask.make_response("no _is_engrave_ready ", HTTP_Precondition_Failed)
-				pass
 			pass
 		elif command == 'tab_activate':
 			self._is_tab_active=True
-			if self.file_selected and self._analysis==None:
-				self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],[self._swap_xy])
-				self._plugin_manager.send_plugin_message(self._identifier, dict(analysis = self._analysis))		
-				pass
+			self._calculate();
 			pass 
 		elif command == 'tab_deactivate':
 			self._is_tab_active = False
 			pass 
 		elif command == 'status':
 			self._update_front()
+			pass
+		elif command == 'plane_reset':
+			self._swap_xy = None
+			self._offset_xy = None
+			self._clear_data_plane(dict(swap_xy =self._swap_xy, offset_xy=self._offset_xy))
+			self._calculate()
+			pass
+		elif command == 'swap_xy':
+			self._swap_xy= None if self._swap_xy else CSwapXY()
+			self._clear_data_plane(dict(swap_xy= self._swap_xy))
+			self._calculate();
+			pass
+		elif command == 'apply_xy_offset':	
+			if self._analysis:
+				self._offset_xy = dict(x=-self._analysis['min']['x'],y=-self._analysis['min']['y'])
+				self._clear_data_plane(dict(offset_xy = self._offset_xy))	
+				self._calculate();
+				pass
 			pass
 		else:
 			self._logger.error("no cmd:"+command)

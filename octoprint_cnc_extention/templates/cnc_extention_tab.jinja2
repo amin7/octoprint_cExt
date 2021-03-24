@@ -1,11 +1,20 @@
 <div class="tab-pane" >
 	<label>File: <span data-bind="text: file_name()"></span></label>
     <textarea id="id_cnc_extention_log" rows="7" style="width:100%;resize:vertical;" readonly ></textarea>
-    <button class="btn btn-warning btn-block" data-bind="enable: is_file_analysis(), click:function(){send_single_cmd('swap_xy')}">swap_xy</button>
-	<div class="w-100"></div> 
     <div class="row-fluid">
         <div class="span4"> 
-        <button class="btn btn-warning btn-block"data-bind="enable: is_file_analysis(), click: probe_area">Probe Area</button>
+            <button class="btn btn-danger btn-block" data-bind="click:function(){send_single_cmd('plane_reset')}">plane_reset/button>
+        </div>
+        <div class="span4">
+            <button class="btn btn-secondary btn-block" data-bind="enable: is_file_analysis(), click:function(){send_single_cmd('swap_xy')}">swap_xy</button>
+        </div>
+        <div class="span4">   
+            <button class="btn btn-secondary btn-block" data-bind="enable: is_file_analysis(), click:function(){send_single_cmd('apply_xy_offset')}">apply_xy_offset</button>
+        </div> 
+    </div>
+    <div class="row-fluid">
+        <div class="span4"> 
+            <button class="btn btn-warning btn-block"data-bind="enable: is_file_analysis(), click: probe_area">Probe Area</button>
         </div>
         <div class="span4"> 
             <button class="btn btn-secondary btn-block" data-bind="click: function(){send_single_cmd('probe_area_stop')}">Probe Stop</button>

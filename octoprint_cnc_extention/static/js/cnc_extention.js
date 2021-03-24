@@ -109,11 +109,11 @@ $(function() {
       }
 
       self.onDataUpdaterPluginMessage = function(plugin, data) {
-        console.log(plugin);
+//        console.log(plugin);
         if (plugin != "cnc_extention") {
             return;
         }
-      //  console.log(data);
+        console.log(data);
 
         if((typeof data.CProbeControl)!='undefined'){
           upd=data.CProbeControl;
@@ -135,20 +135,36 @@ $(function() {
         if((typeof data.analysis)!='undefined'){
           if(data.analysis){
             upd=data.analysis;
-            self.file_selected_width = parseFloat(upd.width);
-            self.file_selected_depth = parseFloat(upd.depth);
-
             self.putLog("file analised: size("+upd.width.toFixed(2)+"x"+upd.depth.toFixed(2)+"), ofset("+upd.min.x.toFixed(2)+"x"+upd.min.y.toFixed(2)+"), z("+upd.min.z.toFixed(2)+","+upd.max.z.toFixed(2)+"))");
+          }
+        }
+
+        if((typeof data.plane)!='undefined'){
+          self.putLog("plane="+ JSON.stringify(data.plane));
+          if(data.plane){
+            self.file_selected_width = parseFloat(data.plane.width);
+            self.file_selected_depth = parseFloat(data.plane.depth);
+    
             self.is_file_analysis(true);
             $("#cnc_extention_Y_p_depth").html("Y+"+self.file_selected_depth_grid())
             $("#cnc_extention_Y_m_depth").html("Y-"+self.file_selected_depth_grid())
             $("#cnc_extention_X_p_width").html("X+"+self.file_selected_width_grid())
             $("#cnc_extention_X_m_width").html("X-"+self.file_selected_width_grid())
+          }else{
+            self.is_file_analysis(false);
           }
         }
 
         if((typeof data.is_engrave_ready)!='undefined'){
           self.is_engrave_avaliable(data.is_engrave_ready);
+        }
+
+        if((typeof data.swap_xy)!='undefined'){
+          self.putLog("swap_xy="+ data.swap_xy);
+        }
+
+        if((typeof data.offset_xy)!='undefined'){
+          self.putLog("offset_xy="+ JSON.stringify(data.offset_xy));
         }
 
         if((typeof data.CBedLevelControl)!='undefined' && data.CBedLevelControl){
