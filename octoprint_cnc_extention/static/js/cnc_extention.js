@@ -24,6 +24,8 @@ $(function() {
       self.is_file_analysis = ko.observable(false);
       self.is_engrave_avaliable = ko.observable(false);
 
+      self.log_scroll = ko.observable(true);
+
       self.file_selected_width=0;
       self.file_selected_depth=0;
       self.cmd_AbsolutePositioning="G90";
@@ -40,21 +42,20 @@ $(function() {
           pre+="\n"
         }
         logs.val(pre+event);
-        document.getElementById("id_cnc_extention_log").scrollTop = document.getElementById("id_cnc_extention_log").scrollHeight;
+        if(self.log_scroll()){
+          document.getElementById("id_cnc_extention_log").scrollTop = document.getElementById("id_cnc_extention_log").scrollHeight;
+        }
       }
+      
+      self.log_scroll.subscribe(function(check) {
+        if(check){
+          document.getElementById("id_cnc_extention_log").scrollTop = document.getElementById("id_cnc_extention_log").scrollHeight;
+        }
+      });
+
 
       self.grid_area.subscribe(function(newValue) {
         self.putLog("grid_area="+newValue+"mm");
-        self.is_file_analysis(false);
-        self.is_engrave_avaliable(false);
-      });
-
-      self.file_name.subscribe(function(filename) {
-        if(filename!=""){
-          self.putLog("select file:"+filename);
-        }else{
-          self.putLog("no file selected");
-        }
         self.is_file_analysis(false);
         self.is_engrave_avaliable(false);
       });
@@ -124,12 +125,12 @@ $(function() {
         }
 
         if((typeof data.file_selected)!='undefined'){
+          path="not_selected"
           if(data.file_selected){
-            upd=data.file_selected;
-            self.file_name(upd.path)
-          }else{
-            self.file_name("")
+            path=data.file_selected.path;
           }
+          self.file_name(path)
+          self.putLog("file:"+path);
         }
 
         if((typeof data.analysis)!='undefined'){
@@ -159,14 +160,6 @@ $(function() {
           self.is_engrave_avaliable(data.is_engrave_ready);
         }
 
-        if((typeof data.swap_xy)!='undefined'){
-          self.putLog("swap_xy="+ data.swap_xy);
-        }
-
-        if((typeof data.offset_xy)!='undefined'){
-          self.putLog("offset_xy="+ JSON.stringify(data.offset_xy));
-        }
-
         if((typeof data.CBedLevelControl)!='undefined' && data.CBedLevelControl){
           upd=data.CBedLevelControl;
           if (upd.state==="Init"){
@@ -194,6 +187,10 @@ $(function() {
           }else{
             self.putLog("probe_area state="+upd.state+", payload="+JSON.stringify(upd));
           }
+        }
+
+        if((typeof data.engrave_assist)!='undefined'){//endrave progressing
+          self.putLog("engrave_assist="+data.engrave_assist);
         }
       };
 
@@ -297,6 +294,11 @@ $(function() {
     self.steper_ajust=function(){
       self.putLog("<steper_ajust>");
       OctoPrint.control.sendGcode(self.cmd_AdjustmentSteppers+" Z"+$("#id_cnc_extention_steper_ajust").val())
+    }
+
+    self.refresh= function(){
+      $("#id_cnc_extention_log").val("");
+      self.send_single_cmd('status');
     }
   }//CextViewModel
 

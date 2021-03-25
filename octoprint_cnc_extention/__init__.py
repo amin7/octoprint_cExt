@@ -360,7 +360,7 @@ def dict2gcode(_dict):
 			gcode += " {key}{val}".format(key=key, val=_dict[key])
 	return gcode
 
-
+# --------------------------------------------------------------
 class CSwapXY:
 	def run(self, cmd):
 		if cmd.startswith("G0") or cmd.startswith("G1") or cmd.startswith("G92"):
@@ -374,15 +374,36 @@ class CSwapXY:
 			return _cmd
 		return cmd #nothing to change	    
 	pass
+# --------------------------------------------------------------
+class COffsetXY:
+	def __init__(self, offs_X, offs_Y):
+		self._offs_X = offs_X
+		self._offs_Y = offs_Y
+		pass
 
+	def status(self):
+		return dict(x=self._offs_X,y=self._offs_Y)
 
+	def run(self, cmd):
+		g_parsed = gcode2dict(cmd)
+		if g_parsed["cmd"] == "G0" or g_parsed["cmd"] == "G1":
+			# add offet for absolute only
+			if "X" in g_parsed:
+				dest_x = g_parsed["X"] + self._offs_X
+				pass
+			if "Y" in g_parsed:
+				dest_y = g_parsed["Y"] + self._offs_Y
+				pass
+			return dict2gcode(g_parsed)
+		return cmd #nothing to change	    
+	pass
+
+# --------------------------------------------------------------
 class CBedLevelAjust:
-	def __init__(self, bedLevel, offs_X, offs_Y):
+	def __init__(self, bedLevel):
 		self._cur_X = 0
 		self._cur_Y = 0
 		self._cur_Z = 0
-		self._offs_X = offs_X
-		self._offs_Y = offs_Y
 		self._bed_level = bedLevel
 		pass
 
@@ -419,14 +440,6 @@ class CBedLevelAjust:
 			dest_y = self._cur_Y
 			dest_z = self._cur_Z
 
-			# add offet for absolute only
-			if "X" in g_parsed:
-				dest_x = g_parsed["X"] + self._offs_X
-				pass
-			if "Y" in g_parsed:
-				dest_y = g_parsed["Y"] + self._offs_Y
-				pass
-
 			line_len = math.hypot(dest_x - self._cur_X, dest_y - self._cur_Y);
 			if 0 == line_len:  # move to same coordinate
 				return self.__line_z_move(g_parsed)
@@ -459,7 +472,22 @@ class CBedLevelAjust:
 
 	pass
 
+# --------------------------------------------------------------
+class CMultyRun:
+	def __init__(self, runner):
+		self._runner=runner
+		pass
+	def run(self, cmd):
+		if self._runner:
+			for trans in self._runner:
+				if trans:
+					cmd = trans.run(cmd)
+					pass
+				pass
+			pass
+		return cmd
 
+# --------------------------------------------------------------
 class CAnalising:
 	_cur_X = 0
 	_cur_Y = 0
@@ -535,7 +563,6 @@ class CAnalising:
 
 	pass
 
-
 # --------------------------------------------------------------
 # --------------------------------------------------------------
 class CextPlugin(octoprint.plugin.SettingsPlugin,
@@ -598,11 +625,12 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	_swap_xy = None
 	_offset_xy = None 
 	_bed_level_ajust = None
-	file_selected = None
+	_file_selected = None
 	_analysis = None
 	_plane = None
 	_is_tab_active=False
 	_is_engrave_ready=False
+	_engrave_assist =None
 
 	def on_after_startup(self):
 		self._logger.info("PluginA starting up")
@@ -619,25 +647,24 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			self._update_front() #update status on front
 			pass
 		elif event == 'FileSelected':
-			self.file_selected = dict(origin=payload['origin'], path=payload['path'])
-			self._clear_data_file()
+			self._file_selected = dict(origin=payload['origin'], path=payload['path'])
+			self._clear_data_file(dict(file_selected=self._file_selected ))
 			self._calculate()
 			pass
-		elif event == 'PrinterStateChanged':
-			# if payload['state_id'] == 'OPERATIONAL' and self._bed_level_ajust:
-			# 	self._bed_level_ajust = None
-			# 	self._plugin_manager.send_plugin_message(self._identifier, dict(bed_level_ajust = False))
-			# 	pass
+		elif event in ['PrintFailed','PrintDone','PrintCancelled']: #finish print
+			if self._engrave_assist:
+				self._engrave_assist = None
+				self._plugin_manager.send_plugin_message(self._identifier, dict(engrave_assist=None))
+				pass
 			pass
 		pass
 
 	def _update_front(self):
-		data = dict(file_selected=self.file_selected, analysis=self._analysis,is_engrave_ready=self._is_engrave_ready)
-		data['bed_level_ajust'] = True if self._bed_level_ajust else False
-		data['swap_xy'] = self._swap_xy
-		data['offset_xy'] = self._offset_xy
+		data = dict(file_selected=self._file_selected, analysis=self._analysis,is_engrave_ready=self._is_engrave_ready)
+		data['bed_level_ajust'] = self._bed_level_ajust is not None
 		data['plane'] = self._plane
-
+		data['engrave_assist'] = self._engrave_assist is not None
+		
 		if self.probe_area_control:
 			self.probe_area_control.on_update_front(data)
 		else:
@@ -648,7 +675,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	def _clear_data_file(self,data=dict()):
 		self._analysis = None
 		data["analysis"]=None
-		self._clear_data_probe(data)	
+		self._plugin_manager.send_plugin_message(self._identifier, data)		
 		pass
 
 	def _clear_data_plane(self,data=dict()):
@@ -670,23 +697,27 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	def _calculate(self):
 		data=dict();
 
-		if self.file_selected and not self._analysis and self._is_tab_active:
-			self._analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],None)
+		if self._file_selected and not self._analysis and self._is_tab_active:
+			self._analysis = self.do_analysis(self._file_selected['origin'],self._file_selected['path'],None)
 	 		data['analysis'] = self._analysis
 	 		# keep plane unchanged
 			pass
 
 		if not self._plane and self._analysis:
+			self._plane=dict()
 			width=self._analysis['width']
 			depth=self._analysis['depth']
 			if self._offset_xy:
-				width=width+self._offset_xy['x']
-				depth=depth+self._offset_xy['y']
+				width=width+self._offset_xy._offs_X
+				depth=depth+self._offset_xy._offs_Y
+				self._plane['offset']=self._offset_xy.status()
 				pass
 			if self._swap_xy:
 				width,depth=depth,width
+				self._plane['swap_xy']=True
 				pass
-			self._plane=dict(width=width,depth=depth)
+			self._plane['width']=width
+			self._plane['depth']=depth
 			data['plane'] = self._plane	
 			pass 
 
@@ -699,7 +730,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		pass
 
 	def on_aftrer_probe_area_done(self):
-		analysis = self.do_analysis(self.file_selected['origin'],self.file_selected['path'],[self._swap_xy])	
+		analysis = self.do_analysis(self._file_selected['origin'],self._file_selected['path'],[self._swap_xy])
 		self._is_engrave_ready=True
 		self._plugin_manager.send_plugin_message(self._identifier, dict(is_engrave_ready=self._is_engrave_ready,analysis = analysis))
 		pass
@@ -711,11 +742,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def gcode_queuing(self, comm_instance, phase, cmd, cmd_type, gcode, subcode=None, tags=None, *args, **kwargs):
 	#	self._logger.info(dict(cmd=cmd, type=cmd_type, gcode=gcode))
-		if self._bed_level_ajust: #engarve active
-			if self._swap_xy:
-				cmd = self._swap_xy.run(cmd)
-				pass
-			cmd = self._bed_level_ajust.run(cmd)
+		if self._engrave_assist: #engarve active
+			cmd = self._engrave_assist.run(cmd)
 			pass
 		return cmd
 
@@ -760,7 +788,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			pass
 		elif command == 'engrave':
 			if self._is_engrave_ready:
-				self._bed_level_ajust = CBedLevelAjust(self._bed_level, self._analysis['min']['x'], self._analysis['min']['y'])
+				self._engrave_assist=CMultyRun([self._offset_xy, self._swap_xy, CBedLevelAjust( self._bed_level)])
+				self._plugin_manager.send_plugin_message(self._identifier, dict(engrave_assist=True))
 				self._printer.start_print()
 				pass
 			pass
@@ -777,18 +806,18 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		elif command == 'plane_reset':
 			self._swap_xy = None
 			self._offset_xy = None
-			self._clear_data_plane(dict(swap_xy =self._swap_xy, offset_xy=self._offset_xy))
+			self._clear_data_plane()
 			self._calculate()
 			pass
 		elif command == 'swap_xy':
 			self._swap_xy= None if self._swap_xy else CSwapXY()
-			self._clear_data_plane(dict(swap_xy= self._swap_xy))
+			self._clear_data_plane()
 			self._calculate();
 			pass
 		elif command == 'apply_xy_offset':	
 			if self._analysis:
-				self._offset_xy = dict(x=-self._analysis['min']['x'],y=-self._analysis['min']['y'])
-				self._clear_data_plane(dict(offset_xy = self._offset_xy))	
+				self._offset_xy = None if self._offset_xy else COffsetXY(-self._analysis['min']['x'],-self._analysis['min']['y'])
+				self._clear_data_plane()	
 				self._calculate();
 				pass
 			pass
@@ -800,15 +829,10 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	def do_analysis(self, origin, path, transforms):
 		path_on_disk = self._file_manager.path_on_disk(origin,path)
 		with io.open(path_on_disk, mode='r', encoding="utf-8", errors="replace") as file_stream:
+			runer = CMultyRun(transforms)
 			analysis = CAnalising()
 			for line in file_stream:
-				if transforms:
-					for trans in transforms:
-						if trans:
-							line = trans.run(line)
-							pass
-						pass
-					pass
+				line=runer.run(line)
 				analysis.add(line)
 				pass
 			return analysis.get_analising()
@@ -835,8 +859,8 @@ def __plugin_load__():
 
 	# show tabs
 	global __plugin_settings_overlay__
-	__plugin_settings_overlay__ = dict(appearance=dict(
-		components=dict(order=dict(tab=["temperature", "control", "gcodeviewer", "terminal", "plugin_cExt"]))))
+	# __plugin_settings_overlay__ = dict(appearance=dict(
+	# 	components=dict(order=dict(tab=["temperature", "control", "gcodeviewer", "terminal", "plugin_cExt"]))))
 
 
 # test

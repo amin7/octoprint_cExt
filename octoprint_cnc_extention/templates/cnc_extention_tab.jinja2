@@ -1,9 +1,17 @@
 <div class="tab-pane" >
-	<label>File: <span data-bind="text: file_name()"></span></label>
+    <div>
+    	<span >File: <span data-bind="text: file_name()"></span></span>
+        <button type="button" class="btn btn-default pull-right btn-fluid" title="refresh" data-bind="click:function(){refresh()}">
+            <span class="glyphicon glyphicon-icon-refresh" aria-hidden="true"></span>R
+        </button>
+        <label class="checkbox checkbox-fluid pull-right" >
+            <input type="checkbox" data-bind="checked: log_scroll"> log_scroll
+        </label>
+    </div>
     <textarea id="id_cnc_extention_log" rows="7" style="width:100%;resize:vertical;" readonly ></textarea>
     <div class="row-fluid">
         <div class="span4"> 
-            <button class="btn btn-danger btn-block" data-bind="click:function(){send_single_cmd('plane_reset')}">plane_reset/button>
+            <button class="btn btn-danger btn-block" data-bind="click:function(){send_single_cmd('plane_reset')}">plane_reset</button>
         </div>
         <div class="span4">
             <button class="btn btn-secondary btn-block" data-bind="enable: is_file_analysis(), click:function(){send_single_cmd('swap_xy')}">swap_xy</button>
