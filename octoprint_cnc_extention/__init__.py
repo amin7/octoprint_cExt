@@ -82,6 +82,8 @@ class CCmdList:
 					self.processCommandList()
 
 
+def roundToGrid(grid,val):
+	return int(math.ceil(float(val) / grid) * grid)
 # --------------------------------------------------------------
 #
 #  *                           z2   --|
@@ -99,13 +101,14 @@ class CCmdList:
 #  *  multiplications.
 
 class CBedLevel:
-	def __init__(self, width, depth, grid):
+	def __init__(self, plane, init_val=None):
 		# round up
-		self.m_sizeX = int(math.ceil(float(width) / grid) * grid)
-		self.m_sizeY = int(math.ceil(float(depth) / grid) * grid)
-		self.m_grid = int(grid)
-		self.m_ZheighArray = [[None for x in range(int(self.m_sizeY / grid + 1))] for y in
-							  range(int(self.m_sizeX / grid + 1))]
+		self.m_grid = plane['grid']
+		self.m_sizeX = roundToGrid(self.m_grid,plane['width'])
+		self.m_sizeY = roundToGrid(self.m_grid,plane['depth'])
+		self.m_ZheighArray = [[init_val for x in range(int(self.m_sizeY / self.m_grid  + 1))] for y in
+							  range(int(self.m_sizeX / self.m_grid  + 1))]
+		pass
 
 	# protected
 	@staticmethod
@@ -182,8 +185,6 @@ class CBedLevelControl:
 
 	def on_update_front(self, data):
 		status = dict(step=self.probe_area_step, count=self.bedLevel.get_count(), state=self._state)
-		if self._state is "Done":
-			status['zHeigh']=self.bedLevel.m_ZheighArray;
 		data['CBedLevelControl'] = status
 		pass
 
@@ -231,10 +232,10 @@ class CBedLevelControl:
 					pass
 				else:
 					self._state="Done";
-					self._report(dict(state=self._state, zHeigh=self.bedLevel.m_ZheighArray));
+					self._report(dict(state=self._state));
 					self.cmdList.addGCode("M117 ProbeArea Done");
 					if self._on_done:
-						self._on_done()
+						self._on_done(self.bedLevel)
 						pass
 					pass
 				return
@@ -619,7 +620,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		)
 
 	cmdList = None
-	_bed_level = None
+	_z_level_map = None
 	probe_area_control = None
 	_probe = None
 	_swap_xy = None
@@ -627,6 +628,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	_bed_level_ajust = None
 	_file_selected = None
 	_analysis = None
+	_grid = 10 #default grid
 	_plane = None
 	_is_tab_active=False
 	_is_engrave_ready=False
@@ -661,9 +663,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def _update_front(self):
 		data = dict(file_selected=self._file_selected, analysis=self._analysis,is_engrave_ready=self._is_engrave_ready)
-		data['bed_level_ajust'] = self._bed_level_ajust is not None
 		data['plane'] = self._plane
 		data['engrave_assist'] = self._engrave_assist is not None
+		data['z_level_map'] = self._z_level_map.m_ZheighArray if self._z_level_map else None
 		
 		if self.probe_area_control:
 			self.probe_area_control.on_update_front(data)
@@ -685,11 +687,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		pass
 	
 	def _clear_data_probe(self,data=dict()):
-		self._bed_level_ajust = None
 		self._is_engrave_ready = False
-		self._bed_level = None
-		data["bed_level"]=False
-		data["bed_level_ajust"]=False
+		self._z_level_map = None
+		data["z_level_map"]=None
 		data["is_engrave_ready"]=False
 		self._plugin_manager.send_plugin_message(self._identifier, data)	
 		pass
@@ -705,8 +705,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 		if not self._plane and self._analysis:
 			self._plane=dict()
-			width=self._analysis['width']
-			depth=self._analysis['depth']
+			width =self._analysis['width']
+			depth =self._analysis['depth']
 			if self._offset_xy:
 				width=width+self._offset_xy._offs_X
 				depth=depth+self._offset_xy._offs_Y
@@ -716,10 +716,19 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				width,depth=depth,width
 				self._plane['swap_xy']=True
 				pass
-			self._plane['width']=width
-			self._plane['depth']=depth
+			
+			self._plane['grid']=self._grid
+			self._plane['width']=roundToGrid(self._grid,width)
+			self._plane['depth']=roundToGrid(self._grid,depth)
 			data['plane'] = self._plane	
 			pass 
+
+		if 	not self._is_engrave_ready and self._z_level_map:
+			self._is_engrave_ready = True
+			data['is_engrave_ready'] =self._is_engrave_ready
+			data['z_level_map'] =self._z_level_map.m_ZheighArray
+			data['analysis_tranformed']  = self.do_analysis(self._file_selected['origin'],self._file_selected['path'],[self._offset_xy,self._swap_xy,CBedLevelAjust(self._z_level_map)])
+			pass
 
 		if data: # is not empty
 			self._plugin_manager.send_plugin_message(self._identifier, data)	
@@ -729,10 +738,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		self._plugin_manager.send_plugin_message(self._identifier, data)
 		pass
 
-	def on_aftrer_probe_area_done(self):
-		analysis = self.do_analysis(self._file_selected['origin'],self._file_selected['path'],[self._swap_xy])
-		self._is_engrave_ready=True
-		self._plugin_manager.send_plugin_message(self._identifier, dict(is_engrave_ready=self._is_engrave_ready,analysis = analysis))
+	def on_aftrer_probe_area_done(self,z_level_map):
+		self._z_level_map=z_level_map
+		self._calculate()
 		pass
 
 	def gcode_received_hook(self, comm_instance, line, *args, **kwargs):
@@ -748,7 +756,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		return cmd
 
 	def get_api_commands(self):
-		return dict(probe_area=['feed_probe', 'feed_z', 'feed_xy', 'grid', 'level_delta_z'],
+		return dict(probe_area=['feed_probe', 'feed_z', 'feed_xy', 'level_delta_z'],
+					grid=['step'],
 					probe=['distanse', 'feed'],
 					probe_area_stop=[],
 					probe_area_skip=[],
@@ -765,10 +774,17 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		response = None
 		if command == 'probe_area':
 			if self._plane:
-				self._is_engrave_ready=False
-				self._bed_level = CBedLevel(self._plane['width'], self._plane['depth'], data['grid'])
-				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, self._bed_level)
+				self._clear_data_probe()
+				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, CBedLevel(self._plane))
 				self.probe_area_control.start(data,self.on_aftrer_probe_area_done)
+				pass
+			pass
+		if command == 'grid':
+			tmp=data['step']
+			if tmp:
+				self._grid = tmp
+				self._clear_data_plane();
+				self._calculate()
 				pass
 			pass
 		if command == 'probe_area_stop':
@@ -779,8 +795,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			pass
 		elif command == 'probe_area_skip':
 			if self._analysis:
-				self._is_engrave_ready = True
-				self._plugin_manager.send_plugin_message(self._identifier, dict(is_engrave_ready=self._is_engrave_ready))
+				self._z_level_map = CBedLevel(self._plane,0)
+				self._calculate()
 				pass
 			pass
 		elif command == 'probe':
@@ -788,7 +804,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			pass
 		elif command == 'engrave':
 			if self._is_engrave_ready:
-				self._engrave_assist=CMultyRun([self._offset_xy, self._swap_xy, CBedLevelAjust( self._bed_level)])
+				self._engrave_assist = CMultyRun([self._offset_xy, self._swap_xy, CBedLevelAjust( self._z_level_map)])
 				self._plugin_manager.send_plugin_message(self._identifier, dict(engrave_assist=True))
 				self._printer.start_print()
 				pass

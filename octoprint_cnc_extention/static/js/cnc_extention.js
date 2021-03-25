@@ -26,8 +26,8 @@ $(function() {
 
       self.log_scroll = ko.observable(true);
 
-      self.file_selected_width=0;
-      self.file_selected_depth=0;
+      self.file_selected_width=ko.observable();
+      self.file_selected_depth=ko.observable();
       self.cmd_AbsolutePositioning="G90";
       self.cmd_RelativePositioning="G91";
       self.cmd_SetPosition000="G92 X0 Y0 Z0";
@@ -53,6 +53,15 @@ $(function() {
         }
       });
 
+      self.file_selected_width.subscribe(function(val) {
+        $("#cnc_extention_X_p_width").html("X+"+val)
+        $("#cnc_extention_X_m_width").html("X-"+val)
+      });
+
+      self.file_selected_depth.subscribe(function(val) {
+        $("#cnc_extention_Y_p_depth").html("Y+"+val)
+        $("#cnc_extention_Y_m_depth").html("Y-"+val)
+      });
 
       self.grid_area.subscribe(function(newValue) {
         self.putLog("grid_area="+newValue+"mm");
@@ -143,14 +152,10 @@ $(function() {
         if((typeof data.plane)!='undefined'){
           self.putLog("plane="+ JSON.stringify(data.plane));
           if(data.plane){
-            self.file_selected_width = parseFloat(data.plane.width);
-            self.file_selected_depth = parseFloat(data.plane.depth);
+            self.file_selected_width(data.plane.width);
+            self.file_selected_depth(data.plane.depth);
     
             self.is_file_analysis(true);
-            $("#cnc_extention_Y_p_depth").html("Y+"+self.file_selected_depth_grid())
-            $("#cnc_extention_Y_m_depth").html("Y-"+self.file_selected_depth_grid())
-            $("#cnc_extention_X_p_width").html("X+"+self.file_selected_width_grid())
-            $("#cnc_extention_X_m_width").html("X-"+self.file_selected_width_grid())
           }else{
             self.is_file_analysis(false);
           }
@@ -168,25 +173,29 @@ $(function() {
           }else if (upd.state==="Progress"){
             self.putLog("probe_area state"+upd.state+" "+upd.step+"/"+upd.count);
           }else if (upd.state==="Done"){
-            self.putLog("probe_area done, map");
-            iRows=upd.zHeigh.length;
-            zHeighLog=""
-            while(iRows){
-              iRows--;
-              zHeighLog+=self._padSpaces('<'+iRows*self.grid_area()+'>',5);
-              upd.zHeigh[iRows].forEach(function(item){
-                zHeighLog+=self._padSpaces(item.toFixed(2),8);
-              })
-              zHeighLog+='\n'
-            }
-            zHeighLog+=self._padSpaces('',5);
-            upd.zHeigh[0].forEach(function(item,index){
-                zHeighLog+=self._padSpaces('<'+index*self.grid_area()+'>',8);
-              })
-            self.putLog(zHeighLog);
+            self.putLog("probe_area done");
           }else{
             self.putLog("probe_area state="+upd.state+", payload="+JSON.stringify(upd));
           }
+        }
+        
+        if((typeof data.z_level_map)!='undefined' && data.z_level_map){//endrave progressing
+          self.putLog('z_level_map');
+          iRows=data.z_level_map.length;
+          zHeighLog=""
+          while(iRows){
+            iRows--;
+            zHeighLog+=self._padSpaces('<'+iRows+'>',5);
+            data.z_level_map[iRows].forEach(function(item){
+              zHeighLog+=self._padSpaces(item.toFixed(2),8);
+            })
+            zHeighLog+='\n'
+          }
+          zHeighLog+=self._padSpaces('',5);
+          data.z_level_map[0].forEach(function(item,index){
+              zHeighLog+=self._padSpaces('<'+index+'>',8);
+            })
+          self.putLog(zHeighLog);
         }
 
         if((typeof data.engrave_assist)!='undefined'){//endrave progressing
@@ -222,74 +231,45 @@ $(function() {
         OctoPrint.control.sendGcode([self.cmd_RelativePositioning,"G0 Z"+distance+" F"+self.printerProfilesViewModel.currentProfileData().axes.z.speed()]);
       }
 
-      self.probe = function(_distanse,_feed) {
-        //console.log(_distanse);
-        $.ajax({
-            url: API_BASEURL + "plugin/cnc_extention",
-            type: "POST",
-            dataType: "json",
-            data: JSON.stringify({
-                command: "probe",
-                distanse: parseFloat(_distanse),
-                feed: parseFloat(_feed)
-            }),
-            contentType: "application/json; charset=UTF-8"
-        });
-      };
 
     self.probe_threshold = function(distanse,feed) {
       let _distanse=parseFloat(distanse);
       _distanse+=parseFloat(self.z_threshold());
       self.probe(_distanse,feed)
     }
-//-----------------------------------------------------------
-    self.send_single_cmd=function(cmd) {
-  //    console.log("send_single_cmd="+cmd)
-      self.putLog("<"+cmd+">");
-   //     console.log((new Error().stack));
-        $.ajax({
-            url: API_BASEURL + "plugin/cnc_extention",
-            type: "POST",
-            dataType: "json",
-            data: JSON.stringify({
-                command: cmd
-            }),
-            contentType: "application/json; charset=UTF-8"
-        });
+
+    self._send_cmd=function(_data) {
+      console.log("_send_cmd", _data);
+      $.ajax({
+          url: API_BASEURL + "plugin/cnc_extention",
+          type: "POST",
+          dataType: "json",
+          data: JSON.stringify(_data),
+          contentType: "application/json; charset=UTF-8"
+      });
     };
 
+    self.probe = function(_distanse,_feed) {
+      //console.log(_distanse);
+      self._send_cmd({command: "probe", distanse: parseFloat(_distanse), feed: parseFloat(_feed) });
+    };
+//-----------------------------------------------------------
+    self.send_single_cmd=function(cmd) {
+      self.putLog("<"+cmd+">");
+      self._send_cmd({command: cmd})
+    }
+
     self.probe_area = function() {
-     // console.log("probe_area");
-        $.ajax({
-            url: API_BASEURL + "plugin/cnc_extention",
-            type: "POST",
-            dataType: "json",
-            data: JSON.stringify({
+      // console.log("probe_area");
+      self._send_cmd({
                 command: "probe_area",
                 feed_probe: self.settingsViewModel.settings.plugins.cnc_extention.speed_probe(),
                 feed_z: self.printerProfilesViewModel.currentProfileData().axes.z.speed(),
                 feed_xy: self.printerProfilesViewModel.currentProfileData().axes.x.speed(),
                 grid: parseInt(self.grid_area()),
                 level_delta_z: self.level_delta_z()
-            }),
-            contentType: "application/json; charset=UTF-8"
-        });
+            });
     };
-
-      //rounded to grid
-    self.up_to_grid=function(val) {
-      _val=parseFloat(val)
-      if(_val===0){
-        return 0
-      }
-      return Math.ceil(_val/self.grid_area())*self.grid_area();
-      };  
-    self.file_selected_width_grid=function() {
-      return self.up_to_grid(self.file_selected_width);
-      };  
-    self.file_selected_depth_grid=function() {
-      return self.up_to_grid(self.file_selected_depth);
-      }; 
 
     self.steper_ajust=function(){
       self.putLog("<steper_ajust>");
