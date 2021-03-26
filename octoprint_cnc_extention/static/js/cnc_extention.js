@@ -15,8 +15,6 @@ $(function() {
       self.z_travel=ko.observable();  
 
       self.level_delta_z=ko.observable();
-      self.z_tool_change=ko.observable();
-      self.grid_area=ko.observable();
       self.probing_state=ko.observable();
 
       self.isOperational = ko.observable();
@@ -63,19 +61,11 @@ $(function() {
         $("#cnc_extention_Y_m_depth").html("Y-"+val)
       });
 
-      self.grid_area.subscribe(function(newValue) {
-        self.putLog("grid_area="+newValue+"mm");
-        self.is_file_analysis(false);
-        self.is_engrave_avaliable(false);
-      });
-
       self._upd_settings=function(){
         plugin_setting=self.settingsViewModel.settings.plugins.cnc_extention;
         self.z_threshold(plugin_setting.z_threshold());
         self.z_travel(plugin_setting.z_travel());
         self.level_delta_z(plugin_setting.level_delta_z());
-        self.z_tool_change(plugin_setting.z_tool_change());
-        self.grid_area(plugin_setting.grid_area());
         $("#cnc_extention_Z_p_min").html("Z+"+plugin_setting.preset_z_min())
         $("#cnc_extention_Z_p_mid").html("Z+"+plugin_setting.preset_z_mid())
         $("#cnc_extention_Z_p_hi").html("Z+"+plugin_setting.preset_z_hi())
@@ -266,7 +256,6 @@ $(function() {
                 feed_probe: self.settingsViewModel.settings.plugins.cnc_extention.speed_probe(),
                 feed_z: self.printerProfilesViewModel.currentProfileData().axes.z.speed(),
                 feed_xy: self.printerProfilesViewModel.currentProfileData().axes.x.speed(),
-                grid: parseInt(self.grid_area()),
                 level_delta_z: self.level_delta_z()
             });
     };
@@ -280,20 +269,8 @@ $(function() {
       $("#id_cnc_extention_log").val("");
       self.send_single_cmd('status');
     }
-  }//CextViewModel
+  }//cncExtenetionViewModel
 
-
-
-    /* view model class, parameters for constructor, container to bind to
-     * Please see http://docs.octoprint.org/en/master/plugins/viewmodels.html#registering-custom-viewmodels for more details
-     * and a full list of the available options.
-
-           OctoPrint.control.sendGcode(CalGcode).done(function () {
-      //OctoPrint.control.sendGcode(CalGcode.split("\n")).done(function () {
-        console.log("   Gcode Sequence Sent");
-      });
-
-     */
     OCTOPRINT_VIEWMODELS.push({
         construct: cncExtenetionViewModel,
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...

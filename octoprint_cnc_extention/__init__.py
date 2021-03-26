@@ -577,12 +577,10 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def get_settings_defaults(self):
 		return dict(
-			speed_probe_fast=40,
-			speed_probe_fine=20,
+			speed_probe=40,
 			z_threshold=1,
 			z_travel=10,
 			level_delta_z=1,
-			z_tool_change=20,
 			grid_area=10
 		)
 
@@ -628,14 +626,13 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	_bed_level_ajust = None
 	_file_selected = None
 	_analysis = None
-	_grid = 10 #default grid
 	_plane = None
 	_is_tab_active=False
 	_is_engrave_ready=False
 	_engrave_assist =None
 
 	def on_after_startup(self):
-		self._logger.info("PluginA starting up")
+		self._logger.info("cnc_extention starting up")
 		self._logger.info(self._printer_profile_manager.get_current())
 		self._logger.info(self._settings)
 		self.cmdList = CCmdList(self._printer.commands)
@@ -653,10 +650,21 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			self._clear_data_file(dict(file_selected=self._file_selected ))
 			self._calculate()
 			pass
+		elif event == 'FileDeselected':
+			self._file_selected = None
+			self._clear_data_file(dict(file_selected=None ))
+			self._calculate()
+			pass
 		elif event in ['PrintFailed','PrintDone','PrintCancelled']: #finish print
 			if self._engrave_assist:
 				self._engrave_assist = None
 				self._plugin_manager.send_plugin_message(self._identifier, dict(engrave_assist=None))
+				pass
+			pass
+		elif event == 'SettingsUpdated':
+			if self._plane and self._plane['grid'] is not int(self._settings.get(['grid_area'])):
+				self._clear_data_plane();
+				self._calculate()
 				pass
 			pass
 		pass
@@ -717,9 +725,10 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				self._plane['swap_xy']=True
 				pass
 			
-			self._plane['grid']=self._grid
-			self._plane['width']=roundToGrid(self._grid,width)
-			self._plane['depth']=roundToGrid(self._grid,depth)
+			grid_area=int(self._settings.get(['grid_area']))
+			self._plane['grid']=grid_area
+			self._plane['width']=roundToGrid(grid_area,width)
+			self._plane['depth']=roundToGrid(grid_area,depth)
 			data['plane'] = self._plane	
 			pass 
 
@@ -757,7 +766,6 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def get_api_commands(self):
 		return dict(probe_area=['feed_probe', 'feed_z', 'feed_xy', 'level_delta_z'],
-					grid=['step'],
 					probe=['distanse', 'feed'],
 					probe_area_stop=[],
 					probe_area_skip=[],
@@ -777,14 +785,6 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				self._clear_data_probe()
 				self.probe_area_control = CBedLevelControl(self.cmdList, self.control_progress_cb, CBedLevel(self._plane))
 				self.probe_area_control.start(data,self.on_aftrer_probe_area_done)
-				pass
-			pass
-		if command == 'grid':
-			tmp=data['step']
-			if tmp:
-				self._grid = tmp
-				self._clear_data_plane();
-				self._calculate()
 				pass
 			pass
 		if command == 'probe_area_stop':
