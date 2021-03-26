@@ -191,6 +191,11 @@ $(function() {
         if((typeof data.engrave_assist)!='undefined'){//endrave progressing
           self.putLog("engrave_assist="+data.engrave_assist);
         }
+
+        if((typeof data.dry_run)!='undefined'){
+          self.putLog("dry_run="+ JSON.stringify(data.dry_run));
+        }
+
       };
 
       self.onTabChange = function(next, current) {

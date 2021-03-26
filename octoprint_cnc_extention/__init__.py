@@ -684,7 +684,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def _clear_data_file(self,data=dict()):
 		self._analysis = None
+		self._is_engrave_ready = False
 		data["analysis"]=None
+		data["is_engrave_ready"]=False
 		self._plugin_manager.send_plugin_message(self._identifier, data)		
 		pass
 
@@ -736,7 +738,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			self._is_engrave_ready = True
 			data['is_engrave_ready'] =self._is_engrave_ready
 			data['z_level_map'] =self._z_level_map.m_ZheighArray
-			data['analysis_tranformed']  = self.do_analysis(self._file_selected['origin'],self._file_selected['path'],[self._offset_xy,self._swap_xy,CBedLevelAjust(self._z_level_map)])
+			data['dry_run']  = self.do_analysis(self._file_selected['origin'],self._file_selected['path'],[self._offset_xy,self._swap_xy,CBedLevelAjust(self._z_level_map)])
 			pass
 
 		if data: # is not empty
@@ -910,7 +912,6 @@ if __name__ == '__main__':
 			print "{file}:{line} ERROR {v1} != {v2}".format(file=caller.filename, line=caller.lineno, v1=v1, v2=v2)
 			pass
 		pass
-
 
 	def test_line(msg=None):
 		caller = getframeinfo(stack()[1][0])
