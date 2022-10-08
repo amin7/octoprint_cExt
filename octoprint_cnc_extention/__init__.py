@@ -598,7 +598,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 	def get_template_configs(self):
 		return [
-			dict(type="settings")
+			dict(type="settings", custom_bindings=False)
 		]
 
 	##~~ Softwareupdate hook
@@ -709,8 +709,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 		if self._file_selected and not self._analysis and self._is_tab_active:
 			self._analysis = self.do_analysis(self._file_selected['origin'],self._file_selected['path'],None)
-	 		data['analysis'] = self._analysis
-	 		# keep plane unchanged
+			data['analysis'] = self._analysis
+			# keep plane unchanged
 			pass
 
 		if not self._plane and self._analysis:
@@ -857,12 +857,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		return None
 
 
-# Starting with OctoPrint 1.4.0 OctoPrint will also support to run under Python 3 in addition to the deprecated
-# Python 2. New plugins should make sure to run under both versions for now. Uncomment one of the following
-# compatibility flags according to what Python versions your plugin supports!
-# __plugin_pythoncompat__ = ">=2.7,<3" # only python 2
-# __plugin_pythoncompat__ = ">=3,<4" # only python 3
-# __plugin_pythoncompat__ = ">=2.7,<4" # python 2 and 3
+__plugin_pythoncompat__ = ">=3,<4" # only python 3
 
 def __plugin_load__():
 	global __plugin_implementation__
@@ -909,13 +904,13 @@ if __name__ == '__main__':
 	def test_isEQ(v1, v2):
 		if v1 != v2:
 			caller = getframeinfo(stack()[1][0])
-			print "{file}:{line} ERROR {v1} != {v2}".format(file=caller.filename, line=caller.lineno, v1=v1, v2=v2)
+			print ("{file}:{line} ERROR {v1} != {v2}".format(file=caller.filename, line=caller.lineno, v1=v1, v2=v2))
 			pass
 		pass
 
 	def test_line(msg=None):
 		caller = getframeinfo(stack()[1][0])
-		print "{file}:{line} {msg}".format(file=caller.filename, line=caller.lineno, msg=msg)
+		print ("{file}:{line} {msg}".format(file=caller.filename, line=caller.lineno, msg=msg))
 		pass
 
 

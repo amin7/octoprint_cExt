@@ -34,15 +34,11 @@
     </div>
 	<hr>        
     <button class="btn btn-dark btn-block" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPosition000); }">Set (0)</button>
+    <button class="btn btn-block" data-bind="enable: isOperational(), click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe());}" >Goto XY(0)</button>
 	<button class="btn btn-primary btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_DisableSteppers); }" >Motors Off</button>
     <hr>
     <div class="row-fluid">
-        <div class="btn-group btn-group-vertical span2">
-            <button id="cnc_extention_Z_m_hi" class="btn btn-warning btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(settingsViewModel.settings.plugins.cnc_extention.preset_z_hi(),settingsViewModel.settings.plugins.cnc_extention.speed_probe());}">Z-</button> 
-            <button id="cnc_extention_Z_m_mid" class="btn btn-warning btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(settingsViewModel.settings.plugins.cnc_extention.preset_z_mid(),settingsViewModel.settings.plugins.cnc_extention.speed_probe());}">Z-</button> 
-            <button id="cnc_extention_Z_m_min" class="btn btn-warning btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(settingsViewModel.settings.plugins.cnc_extention.preset_z_min(),settingsViewModel.settings.plugins.cnc_extention.speed_probe());}">Z-</button> 
-        </div>
-        <div class="span8">
+        <div class="span9">
             <div class="span8 offset2"> 
                 <button id="cnc_extention_Y_p_depth" class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(0, file_selected_depth());} ">Y +depth</button> 
             </div>
@@ -51,7 +47,7 @@
                     <button id="cnc_extention_X_m_width" class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy(-file_selected_width(),0);}">X -width</button>
                 </div>
                 <div class="span4">
-                    <button class="btn btn-warning btn-block" data-bind="enable: isOperational(), click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe());}" >Goto XY(0)</button>
+                    <button class="btn btn-block" data-bind="enable: isOperational(), click: function() { z_hop(z_travel());absolute_move_xy(0,0); probe(z_travel(),speed_probe());}" >Set XY(0)</button>
                 </div>
                 <div class="span4">
                     <button id="cnc_extention_X_p_width" class="btn btn-info btn-block" data-bind="enable: isOperational() && is_file_analysis(), click: function() {relative_move_xy( file_selected_width(),0);}">X +width</button>
@@ -62,12 +58,23 @@
             </div>
 
         </div>
-        <div class="btn-group btn-group-vertical span2">
+        <div class="btn-group btn-group-vertical span3">
             <button id="cnc_extention_Z_p_hi" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {z_hop(settingsViewModel.settings.plugins.cnc_extention.preset_z_hi());}">Z+</button> 
-            <button id="cnc_extention_Z_p_mid" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {z_hop(settingsViewModel.settings.plugins.cnc_extention.preset_z_mid());}">Z+</button> 
-            <button id="cnc_extention_Z_p_min" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {z_hop(settingsViewModel.settings.plugins.cnc_extention.preset_z_min());}">Z+</button> 
+            <button class="btn btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_SetPositionZ0); }">set Z(0)</button>
+            <button id="cnc_extention_Z_p_mid" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {z_hop(settingsViewModel.settings.plugins.cnc_extention.preset_z_mid());}">Z-</button> 
         </div>
     </div>
+    <br>
+    <div class="row-fluid">
+        <div class="btn-group btn-group span9">
+            <button class="btn" data-bind="enable: isOperational(),click: function() {z_hop(settingsViewModel.settings.plugins.cnc_extention.preset_z_hi());}">0.1</button> 
+            <button class="btn" data-bind="enable: isOperational(),click: function() {z_hop(settingsViewModel.settings.plugins.cnc_extention.preset_z_mid());}">1</button> 
+            <button class="btn" data-bind="enable: isOperational(),click: function() {z_hop(settingsViewModel.settings.plugins.cnc_extention.preset_z_hi());}">10</button> 
+            <button class="btn" data-bind="enable: isOperational(),click: function() {z_hop(settingsViewModel.settings.plugins.cnc_extention.preset_z_mid());}">100</button> 
+            <button class="btn" data-bind="enable: isOperational(),click: function() {z_hop(settingsViewModel.settings.plugins.cnc_extention.preset_z_mid());}">from file</button> 
+        </div>
+    </div>
+
     <label class="span12"> Probe state: <span data-bind="text:probing_state "></span></label>
     <div class="row-fluid">
         <div class="span5">
