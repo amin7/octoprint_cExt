@@ -60,19 +60,40 @@ $(function() {
         $("#cnc_extention_Y_p_depth").html("Y+"+val)
         $("#cnc_extention_Y_m_depth").html("Y-"+val)
       });
+      
+      self.move_step_x=ko.observable();
+      self.move_step_y=ko.observable();
+      self.move_step_z=ko.observable();
+
+      self.move_step_x.subscribe(function(val) {
+        $("#cnc_extention_X_step_minus").html("X-"+val)
+        $("#cnc_extention_X_step_plus").html("X+"+val)
+      })
+      self.move_step_y.subscribe(function(val) {
+        $("#cnc_extention_Y_step_minus").html("Y-"+val)
+        $("#cnc_extention_Y_step_plus").html("Y+"+val)
+      })
+      self.move_step_z.subscribe(function(val) {
+        $("#cnc_extention_Z_step_minus").html("Z-"+val)
+        $("#cnc_extention_Z_step_plus").html("Z+"+val)
+      })
+      self.move_step_x(10)
+      self.move_step_y(10)
+      self.move_step_z(10)
 
       self._upd_settings=function(){
         plugin_setting=self.settingsViewModel.settings.plugins.cnc_extention;
         self.z_threshold(plugin_setting.z_threshold());
         self.z_travel(plugin_setting.z_travel());
         self.level_delta_z(plugin_setting.level_delta_z());
-        $("#cnc_extention_Z_p_min").html("Z+"+plugin_setting.preset_z_min())
-        $("#cnc_extention_Z_p_mid").html("Z+"+plugin_setting.preset_z_mid())
-        $("#cnc_extention_Z_p_hi").html("Z+"+plugin_setting.preset_z_hi())
-        $("#cnc_extention_Z_m_min").html("Z-"+plugin_setting.preset_z_min())
-        $("#cnc_extention_Z_m_mid").html("Z-"+plugin_setting.preset_z_mid())
-        $("#cnc_extention_Z_m_hi").html("Z-"+plugin_setting.preset_z_hi())
       }
+
+      self.set_move_step_xyz=function(val){
+        self.move_step_x(val);
+        self.move_step_y(val);
+        self.move_step_z(val);
+      }
+
       self.onBeforeBinding = function() {
         self._upd_settings();
       }
@@ -208,9 +229,6 @@ $(function() {
         }     
       }
 //---------------------------------------------------------
-          // assign the injected parameters, e.g.:
-          // self.loginStateViewModel = parameters[0];
-          // self.settingsViewModel = parameters[1];
       self.relative_move_xy = function(offset_x,offset_y){
         let feed = self.printerProfilesViewModel.currentProfileData().axes.x.speed();
         OctoPrint.control.sendGcode([self.cmd_RelativePositioning,'G0 F'+feed+' X'+offset_x+' Y'+offset_y]);
@@ -280,7 +298,7 @@ $(function() {
         construct: cncExtenetionViewModel,
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
         dependencies: [ "settingsViewModel", "printerProfilesViewModel"],
-        // Elements to bind to, e.g. #settings_plugin_cExt, #tab_plugin_cExt, ...
-        elements: ["#settings_plugin_cnc_extention","#navbar_plugin_cnc_extention","#tab_plugin_cnc_extention"]
+        // Elements to bind to, e.g.n_cExt, ...
+        elements: [/*"#settings_plugin_cnc_extention",*/"#tab_plugin_cnc_extention"]
     });
 });
