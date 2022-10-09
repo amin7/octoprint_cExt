@@ -1,7 +1,21 @@
-<h4>Bed Leveling Wizard</h4>
+<h4>CNC</h4>
 <form class="form-horizontal">
 	<div class="row-fluid">
 		<div class="row-fluid">
+			<div class="input-append span3">
+				<label>feed_xy</label>
+				<input class="input-mini text-right" type="number" data-bind="value: settings.plugins.cnc_extention.feed_xy"/>
+				<div class="add-on">
+					<span class="input-group-text">mm/s</span>
+				</div>
+			</div>
+			<div class="input-append span3">
+				<label>feed_z</label>
+				<input class="input-mini text-right" type="number" step="0.1" data-bind="value: settings.plugins.cnc_extention.feed_z"/>
+				<div class="add-on">
+					<span class="input-group-text">mm/s</span>
+				</div>
+			</div>
 			<div class="input-append span3">
 				<label>Probing Speed </label>
 				<input class="input-mini text-right" type="number" data-bind="value: settings.plugins.cnc_extention.speed_probe"/>
@@ -44,5 +58,4 @@
 			</div>
 		</div>
 	</div>
-	<span>*speed, size setting is used from printer</span>
 </form>

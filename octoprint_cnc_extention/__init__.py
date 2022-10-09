@@ -581,7 +581,9 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			z_threshold=1,
 			z_travel=10,
 			level_delta_z=1,
-			grid_area=10
+			grid_area=10,
+			feed_xy=500,
+			feed_z=100
 		)
 
 	##~~ AssetPlugin mixin

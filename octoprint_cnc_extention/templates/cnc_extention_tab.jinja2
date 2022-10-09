@@ -22,8 +22,8 @@
     </div>
     <br>
     <div class="row-fluid"> 
-        <button class="btn span6" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPositionX0Y0); }">Set XY(0)</button>
-        <button class="btn span6" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_SetPositionZ0); }">set Z(0)</button>
+        <button class="btn span6" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPositionX0Y0);send_single_cmd('probe_area_stop');}">Set XY(0)</button>
+        <button class="btn span6" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_SetPositionZ0);}">set Z(0)</button>
     </div>
     <br>
     <div class="row-fluid">
@@ -39,7 +39,7 @@
     </div>
     <br>
         <button class="btn btn-primary btn-block" data-bind="enable: is_engrave_avaliable(), click: function(){send_single_cmd('engrave')}" >Engrave</button>
-	<hr>        
+	<hr>
 	<button class="btn btn-primary btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_DisableSteppers); }" >Motors Off</button>
     <br>
     <div class="row-fluid">
@@ -52,7 +52,7 @@
                     <button id="cnc_extention_X_step_minus" class="btn btn-info btn-block" data-bind="enable: isOperational(), click: function() {relative_move_xy(-move_step_x(),0);}">X-</button>
                 </div>
                 <div class="span4">
-                    <button class="btn btn-block" data-bind="enable: isOperational(), click: function() { z_hop(z_travel());absolute_move_xy(0,0);}" >goto XY(0)</button>
+                    <button class="btn btn-block" data-bind="enable: isOperational(), click: function() {absolute_move_xy(0,0);}" >goto XY(0)</button>
                 </div>
                 <div class="span4">
                     <button id="cnc_extention_X_step_plus" class="btn btn-info btn-block" data-bind="enable: isOperational() , click: function() {relative_move_xy( move_step_x(),0);}">X+</button>
@@ -64,29 +64,29 @@
 
         </div>
         <div class="btn-group btn-group-vertical span3">
-            <button id="cnc_extention_Z_step_plus" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {z_hop(move_step_z());}">Z+</button> 
-            <button class="btn btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(move_step_z(),settingsViewModel.settings.plugins.cnc_extention.speed_probe());}">goto Z(0)</button> 
-            <button id="cnc_extention_Z_step_minus" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(move_step_z(),settingsViewModel.settings.plugins.cnc_extention.speed_probe());}">Z-</button> 
+            <button id="cnc_extention_Z_step_plus" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {relative_move_z(move_step_z());}">Z+</button> 
+            <button class="btn btn-block" data-bind="enable: isOperational(),click: function() {absolute_move_z(0);}">goto Z(0)</button> 
+            <button id="cnc_extention_Z_step_minus" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(move_step_z());}">Z-</button> 
         </div>
     </div>
     <br>
     <div class="row-fluid">
-        <div class="btn-group btn-group span12">
+        <div class="btn-group btn-group span8">
             <button class="btn span2" data-bind="enable: isOperational(),click: function() {set_move_step_xyz(0.1);}">0.1</button> 
             <button class="btn span2" data-bind="enable: isOperational(),click: function() {set_move_step_xyz(1);}">1</button> 
             <button class="btn span2" data-bind="enable: isOperational(),click: function() {set_move_step_xyz(10);}">10</button> 
             <button class="btn span2" data-bind="enable: isOperational(),click: function() {set_move_step_xyz(100);}">100</button> 
-            <button class="btn span2" data-bind="enable: isOperational()&& is_file_analysis(),click: function() {move_step_x(file_selected_width());move_step_y(file_selected_depth());}">from plane</button> 
+            <button class="btn span4" data-bind="enable: isOperational()&& is_file_analysis(),click: function() {move_step_x(file_selected_width());move_step_y(file_selected_depth());}">from plane</button> 
         </div>
+        <label class="span4">Probe: <span data-bind="text:probing_state "></span></label>
     </div>
-
-    <label class="span12"> Probe state: <span data-bind="text:probing_state "></span></label>
+    <hr>
     <div class="row-fluid">
         <div class="span3">
             <div class="input-append ">
                 <input id="id_cnc_extention_steper_ajust" class="input-mini text-right" type="number" step="0.1">
                 <div class="add-on">
-                    <span class="input-group-text"> mm</span>
+                    <span class="input-group-text">mm</span>
                 </div>
             </div>
         </div>

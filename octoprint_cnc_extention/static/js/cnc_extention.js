@@ -220,25 +220,31 @@ $(function() {
       }
 //---------------------------------------------------------
       self.relative_move_xy = function(offset_x,offset_y){
-        let feed = self.printerProfilesViewModel.currentProfileData().axes.x.speed();
-        OctoPrint.control.sendGcode([self.cmd_RelativePositioning,'G0 F'+feed+' X'+offset_x+' Y'+offset_y]);
+        let feed = self.settingsViewModel.settings.plugins.cnc_extention.feed_xy();
+        OctoPrint.control.sendGcode([self.cmd_RelativePositioning,'G38.3 F'+feed+' X'+offset_x+' Y'+offset_y]);
       }
 
       self.absolute_move_xy = function(x,y){
-        let feed = self.printerProfilesViewModel.currentProfileData().axes.x.speed();
-        OctoPrint.control.sendGcode([self.cmd_AbsolutePositioning,'G0 F'+feed+' X'+x+' Y'+y]);
+        let feed = self.settingsViewModel.settings.plugins.cnc_extention.feed_xy();
+        OctoPrint.control.sendGcode([self.cmd_AbsolutePositioning,'G38.3 F'+feed+' X'+x+' Y'+y]);
       }
       
-      self.z_hop = function(distance) { 
+      self.relative_move_z = function(offset_z) { 
     //    console.log(self.printerProfilesViewModel.currentProfileData());
-        OctoPrint.control.sendGcode([self.cmd_RelativePositioning,"G0 Z"+distance+" F"+self.printerProfilesViewModel.currentProfileData().axes.z.speed()]);
+        let feed = self.settingsViewModel.settings.plugins.cnc_extention.feed_z();
+        OctoPrint.control.sendGcode([self.cmd_RelativePositioning,"G38.3 F"+feed+"Z"+offset_z]);
+      }
+
+      self.absolute_move_z = function(z){
+        let feed = self.settingsViewModel.settings.plugins.cnc_extention.feed_z();
+        OctoPrint.control.sendGcode([self.cmd_AbsolutePositioning,'G38.3 F'+feed+' Z'+z]);
       }
 
 
-    self.probe_threshold = function(distanse,feed) {
+    self.probe_threshold = function(distanse) {
       let _distanse=parseFloat(distanse);
       _distanse+=parseFloat(self.z_threshold());
-      self.probe(_distanse,feed)
+      self.probe(_distanse,self.settingsViewModel.settings.plugins.cnc_extention.speed_probe())
     }
 
     self._send_cmd=function(_data) {
@@ -267,8 +273,8 @@ $(function() {
       self._send_cmd({
                 command: "probe_area",
                 feed_probe: self.settingsViewModel.settings.plugins.cnc_extention.speed_probe(),
-                feed_z: self.printerProfilesViewModel.currentProfileData().axes.z.speed(),
-                feed_xy: self.printerProfilesViewModel.currentProfileData().axes.x.speed(),
+                feed_z: self.settingsViewModel.settings.plugins.cnc_extention.feed_z(),
+                feed_xy: self.settingsViewModel.settings.plugins.cnc_extention.feed_xy(),
                 level_delta_z: self.level_delta_z()
             });
     };
