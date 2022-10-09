@@ -184,11 +184,19 @@ $(function() {
           self.putLog('z_level_map');
           iRows=data.z_level_map.length;
           zHeighLog=""
+          let min=0;
+          let max=0;
           while(iRows){
             iRows--;
             zHeighLog+=self._padSpaces('<'+iRows+'>',5);
             data.z_level_map[iRows].forEach(function(item){
               zHeighLog+=self._padSpaces(item.toFixed(2),8);
+              if(min<item){
+                min=item;
+              }
+              if(max>item){
+                max=item;
+              }
             })
             zHeighLog+='\n'
           }
@@ -196,6 +204,8 @@ $(function() {
           data.z_level_map[0].forEach(function(item,index){
               zHeighLog+=self._padSpaces('<'+index+'>',8);
             })
+          zHeighLog+='\n'
+          zHeighLog+="min="+min+", max="+max+", delta="+(max-min);
           self.putLog(zHeighLog);
         }
 
@@ -217,6 +227,14 @@ $(function() {
         if(current === self.tab_name){
           self.send_single_cmd('tab_deactivate');
         }     
+      }
+
+      self.onZChange=function(payload){
+        console.log(payload);
+      }
+
+      self.onPositionUpdate=function(payload){
+        console.log(payload);
       }
 //---------------------------------------------------------
       self.relative_move_xy = function(offset_x,offset_y){
