@@ -28,7 +28,7 @@ $(function() {
       self.file_selected_depth=ko.observable();
       self.cmd_AbsolutePositioning="G90";
       self.cmd_RelativePositioning="G91";
-      self.cmd_SetPosition000="G92 X0 Y0 Z0";
+      self.cmd_SetPositionX0Y0="G92 X0 Y0 Z0";
       self.cmd_SetPositionZ0="G92 Z0";
       self.cmd_DisableSteppers="M18"
       self.cmd_AdjustmentSteppers="M666"
@@ -49,16 +49,6 @@ $(function() {
         if(check){
           document.getElementById("id_cnc_extention_log").scrollTop = document.getElementById("id_cnc_extention_log").scrollHeight;
         }
-      });
-
-      self.file_selected_width.subscribe(function(val) {
-        $("#cnc_extention_X_p_width").html("X+"+val)
-        $("#cnc_extention_X_m_width").html("X-"+val)
-      });
-
-      self.file_selected_depth.subscribe(function(val) {
-        $("#cnc_extention_Y_p_depth").html("Y+"+val)
-        $("#cnc_extention_Y_m_depth").html("Y-"+val)
       });
       
       self.move_step_x=ko.observable();
