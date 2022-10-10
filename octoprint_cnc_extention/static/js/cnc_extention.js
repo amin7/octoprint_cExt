@@ -31,7 +31,6 @@ $(function() {
       self.cmd_SetPositionX0Y0="G92 X0 Y0 Z0";
       self.cmd_SetPositionZ0="G92 Z0";
       self.cmd_DisableSteppers="M18"
-      self.cmd_AdjustmentSteppers="M666"
 
       self.putLog=function(event){
         logs=$("#id_cnc_extention_log");
@@ -248,9 +247,9 @@ $(function() {
       }
       
       self.relative_move_z = function(offset_z) { 
-    //    console.log(self.printerProfilesViewModel.currentProfileData());
         let feed = self.settingsViewModel.settings.plugins.cnc_extention.feed_z();
-        OctoPrint.control.sendGcode([self.cmd_RelativePositioning,"G38.3 F"+feed+"Z"+offset_z]);
+        let cmd=(offset_z>0)?"G0":"G38.3";
+        OctoPrint.control.sendGcode([self.cmd_RelativePositioning,cmd+" F"+feed+" Z"+offset_z]);
       }
 
       self.absolute_move_z = function(z){
@@ -296,11 +295,6 @@ $(function() {
                 level_delta_z: self.level_delta_z()
             });
     };
-
-    self.steper_ajust=function(){
-      self.putLog("<steper_ajust>");
-      OctoPrint.control.sendGcode(self.cmd_AdjustmentSteppers+" Z"+$("#id_cnc_extention_steper_ajust").val())
-    }
 
     self.refresh= function(){
       $("#id_cnc_extention_log").val("");
