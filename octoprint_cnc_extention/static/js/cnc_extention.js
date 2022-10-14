@@ -24,8 +24,8 @@ $(function() {
 
       self.log_scroll = ko.observable(true);
 
-      self.file_selected_width=ko.observable();
-      self.file_selected_depth=ko.observable();
+      self.plane_width=ko.observable();
+      self.plane_depth=ko.observable();
       self.cmd_AbsolutePositioning="G90";
       self.cmd_RelativePositioning="G91";
       self.cmd_SetPositionX0Y0="G92 X0 Y0 Z0";
@@ -145,15 +145,15 @@ $(function() {
         if((typeof data.analysis)!='undefined'){
           if(data.analysis){
             upd=data.analysis;
-            self.putLog("file analised: size("+upd.width.toFixed(2)+"x"+upd.depth.toFixed(2)+"), ofset("+upd.min.x.toFixed(2)+"x"+upd.min.y.toFixed(2)+"), z("+upd.min.z.toFixed(2)+","+upd.max.z.toFixed(2)+"))");
+            self.putLog("file analised: min("+upd.min.x.toFixed(2)+"x"+upd.min.y.toFixed(2)+"), max("+upd.max.x.toFixed(2)+"x"+upd.max.y.toFixed(2)+"), z("+upd.min.z.toFixed(2)+","+upd.max.z.toFixed(2)+"))");
           }
         }
 
         if((typeof data.plane)!='undefined'){
           self.putLog("plane="+ JSON.stringify(data.plane));
           if(data.plane){
-            self.file_selected_width(data.plane.width);
-            self.file_selected_depth(data.plane.depth);
+            self.plane_width(data.plane.width);
+            self.plane_depth(data.plane.depth);
     
             self.is_file_analysis(true);
           }else{
