@@ -291,7 +291,7 @@ $(function() {
                 command: "probe_area",
                 feed_probe: self.settingsViewModel.settings.plugins.cnc_extention.speed_probe(),
                 feed_z: self.settingsViewModel.settings.plugins.cnc_extention.feed_z(),
-                feed_xy: self.settingsViewModel.settings.plugins.cnc_extention.feed_xy(),
+                feed_xy: self.settingsViewModel.settings.plugins.cnc_extention.probe_area_feed_xy(),
                 level_delta_z: self.level_delta_z()
             });
     };

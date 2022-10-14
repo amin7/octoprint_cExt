@@ -40,8 +40,15 @@
 				</div>
 			</div>
 		</div>
-		<h5>Area</h5>
+		<h5>Probe Area</h5>
 		<div class="row-fluid">
+			<div class="input-append span3">
+				<label>feed_xy</label>
+				<input class="input-mini text-right" type="number" data-bind="value: settings.plugins.cnc_extention.probe_area_feed_xy"/>
+				<div class="add-on">
+					<span class="input-group-text">mm/s</span>
+				</div>
+			</div>
 			<div class="input-append span3">
 				<label>level_delta_z </label>
 				<input class="input-mini text-right" type="number" step="0.1" data-bind="value: settings.plugins.cnc_extention.level_delta_z"/>
