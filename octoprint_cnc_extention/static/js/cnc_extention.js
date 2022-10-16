@@ -144,16 +144,20 @@ $(function() {
 
         if((typeof data.analysis)!='undefined'){
           if(data.analysis){
-            upd=data.analysis;
-            self.putLog("file analised: min("+upd.min.x.toFixed(2)+"x"+upd.min.y.toFixed(2)+"), max("+upd.max.x.toFixed(2)+"x"+upd.max.y.toFixed(2)+"), z("+upd.min.z.toFixed(2)+","+upd.max.z.toFixed(2)+"))");
+            self.putLog("file analised="+ JSON.stringify(data.analysis) );
           }
         }
 
         if((typeof data.plane)!='undefined'){
           self.putLog("plane="+ JSON.stringify(data.plane));
           if(data.plane){
-            self.plane_width(data.plane.width);
-            self.plane_depth(data.plane.depth);
+            if(data.plane.swap_xy){
+              self.plane_width(data.plane.depth);
+              self.plane_depth(data.plane.width);
+            }else{
+              self.plane_width(data.plane.width);
+              self.plane_depth(data.plane.depth);       
+            }
     
             self.is_file_analysis(true);
           }else{
