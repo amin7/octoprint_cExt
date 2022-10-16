@@ -82,8 +82,6 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	_z_level_map = None
 	probe_area_control = None
 	_probe = None
-	_swap_xy = None
-	_offset_xy = None 
 	_bed_level_ajust = None
 	_file_selected = None
 	_analysis = None
@@ -148,7 +146,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		self._is_engrave_ready = False
 		data["analysis"]=None
 		data["is_engrave_ready"]=False
-		self._plugin_manager.send_plugin_message(self._identifier, data)		
+		self._plugin_manager.send_plugin_message(self._identifier, data)
 		pass
 
 	def _clear_data_plane(self,data=dict()):
@@ -162,8 +160,16 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 		self._z_level_map = None
 		data["z_level_map"]=None
 		data["is_engrave_ready"]=False
-		self._plugin_manager.send_plugin_message(self._identifier, data)	
+		self._plugin_manager.send_plugin_message(self._identifier, data)
 		pass
+
+	def _get_runners(self):
+		transforms=[COffsetXY(self._plane['offset']['x'],self._plane['offset']['y'])];
+		if self._plane['swap_xy']:
+			transforms.append(CSwapXY())
+			pass
+		transforms.append(CBedLevelAjust( self._z_level_map));
+		return transforms
 
 	def _calculate(self):
 		data=dict();
@@ -178,10 +184,8 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 
 		if not self._plane and self._analysis:
 			self._plane=dict()
-			self._plane['filename']=self._analysis['filename']
-			self._plane['offset']=dict()
-			self._plane['offset']['x']=self._analysis['min']['x']
-			self._plane['offset']['y']=self._analysis['min']['y']
+			self._plane['filename']=self._file_selected['path']
+			self._plane['offset']=dict(x=-self._analysis['min']['x'],y=self._analysis['min']['y'])#is expected that coordinates will be positive 
 			self._plane['swap_xy']=False
 			grid_area=int(self._settings.get(['grid_area']))
 			self._plane['grid']=grid_area
@@ -190,15 +194,15 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			data['plane'] = self._plane
 			pass 
 
-		if 	not self._is_engrave_ready and self._z_level_map:
+		if not self._is_engrave_ready and self._z_level_map:
 			self._is_engrave_ready = True
 			data['is_engrave_ready'] =self._is_engrave_ready
 			data['z_level_map'] =self._z_level_map.m_ZheighArray
-			data['dry_run']  = self.do_analysis(self._file_selected['origin'],self._file_selected['path'],[self._offset_xy,self._swap_xy,CBedLevelAjust(self._z_level_map)])
+			data['dry_run']  = self.do_analysis(self._file_selected['origin'],self._file_selected['path'],self._get_runners())
 			pass
 
 		if data: # is not empty
-			self._plugin_manager.send_plugin_message(self._identifier, data)	
+			self._plugin_manager.send_plugin_message(self._identifier, data)
 		pass
 
 	def control_progress_cb(self, data):
@@ -232,8 +236,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 					tab_activate=[],
 					tab_deactivate=[],
 					status=[],
-					plane_reset=[],
-					apply_xy_offset=[])
+					plane_reset=[])
 
 	def on_api_command(self, command, data):
 		self._logger.info("on_api_command:" + command, data)
@@ -262,7 +265,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			pass
 		elif command == 'engrave':
 			if self._is_engrave_ready:
-				self._engrave_assist = CMultyRun([self._offset_xy, self._swap_xy, CBedLevelAjust( self._z_level_map)])
+				self._engrave_assist = CMultyRun(self._get_runners())
 				self._plugin_manager.send_plugin_message(self._identifier, dict(engrave_assist=True))
 				self._printer.start_print()
 				pass
@@ -278,21 +281,16 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 			self._update_front()
 			pass
 		elif command == 'plane_reset':
-			self._swap_xy = None
-			self._offset_xy = None
 			self._clear_data_plane()
 			self._calculate()
 			pass
 		elif command == 'swap_xy':
-			self._swap_xy= None if self._swap_xy else CSwapXY()
-			self._clear_data_plane()
-			self._calculate();
-			pass
-		elif command == 'apply_xy_offset':
-			if self._analysis:
-				self._offset_xy = None if self._offset_xy else COffsetXY(-self._analysis['min']['x'],-self._analysis['min']['y'])
-				self._clear_data_plane()
-				self._calculate();
+			if(self._plane):
+				self._plane['swap_xy']=not self._plane['swap_xy']
+				tmp=self._plane['width']
+				self._plane['width']=self._plane['depth']
+				self._plane['depth']=tmp
+				self._plugin_manager.send_plugin_message(self._identifier, dict(plane=self._plane))
 				pass
 			pass
 		else:
@@ -309,9 +307,7 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 				line=runer.run(line)
 				analysis.add(line)
 				pass
-			result=analysis.get_analising()
-			result['filename']=path
-			return result
+			return analysis.get_analising()
 		return None
 
 
@@ -337,9 +333,6 @@ def __plugin_load__():
 
 if __name__ == '__main__':
 	from inspect import getframeinfo, stack
-
-
-
 
 	print("test begin")
 	# test1.py executed as script

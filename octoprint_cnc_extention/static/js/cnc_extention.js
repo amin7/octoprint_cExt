@@ -151,14 +151,8 @@ $(function() {
         if((typeof data.plane)!='undefined'){
           self.putLog("plane="+ JSON.stringify(data.plane));
           if(data.plane){
-            if(data.plane.swap_xy){
-              self.plane_width(data.plane.depth);
-              self.plane_depth(data.plane.width);
-            }else{
-              self.plane_width(data.plane.width);
-              self.plane_depth(data.plane.depth);       
-            }
-    
+            self.plane_width(data.plane.width);
+            self.plane_depth(data.plane.depth);
             self.is_file_analysis(true);
           }else{
             self.is_file_analysis(false);

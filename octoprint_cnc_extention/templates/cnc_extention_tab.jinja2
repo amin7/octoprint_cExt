@@ -10,15 +10,8 @@
     </div>
     <textarea id="id_cnc_extention_log" rows="7" style="width:100%;resize:vertical;" readonly ></textarea>
     <div class="row-fluid">
-        <div class="span4"> 
-            <button class="btn btn-danger btn-block" data-bind="click:function(){send_single_cmd('plane_reset')}">plane_reset</button>
-        </div>
-        <div class="span4">
-            <button class="btn btn-secondary btn-block" data-bind="enable: is_file_analysis(), click:function(){send_single_cmd('swap_xy')}">swap_xy</button>
-        </div>
-        <div class="span4">
-            <button class="btn btn-secondary btn-block" data-bind="enable: is_file_analysis(), click:function(){send_single_cmd('apply_xy_offset')}">apply_xy_offset</button>
-        </div> 
+        <button class="btn btn-secondary span6" data-bind="enable: is_file_analysis()&&(!is_engrave_avaliable()), click:function(){send_single_cmd('swap_xy')}">swap_xy</button>
+        <button class="btn btn-danger span6" data-bind="click:function(){send_single_cmd('plane_reset')}">plane_reset</button>
     </div>
     <br>
     <div class="row-fluid"> 

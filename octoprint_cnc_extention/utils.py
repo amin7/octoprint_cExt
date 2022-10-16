@@ -17,6 +17,8 @@ GCODE_MOVE_Z = "G0 F{feed} Z{dist}"
 GCODE_SET_POS_000 = "G92 X0 Y0 Z0"
 GCODE_SET_POS_00Z = "G92 X0 Y0 Z{pos_z}"
 
+GCODE_CMD_SET_POS ="G92"
+
 HTTP_Precondition_Failed = 412
 
 
@@ -54,7 +56,7 @@ def dict2gcode(_dict):
 	gcode = _dict['cmd']
 	for key in _dict.keys():
 		if key != "cmd":
-			gcode += " {key}{val}".format(key=key, val=_dict[key])
+			gcode += " {key}{val:g}".format(key=key, val=_dict[key])
 	return gcode
 
 # --------------------------------------------------------------
@@ -130,22 +132,29 @@ class CAnalising:
 					max=dict(x=self._max_x, y=self._max_y, z=self._max_z),
 					line=dict(total=self._total_lines,move= self._lines_move)
 					)
-
 	pass
 
 # --------------------------------------------------------------
 class CSwapXY:
+	@staticmethod
+	def _get_and_delete(dict,key):
+		if key in dict:
+			val=dict[key]
+			del dict[key]
+			return val
+		return None
+
 	def run(self, cmd):
-		if cmd.startswith("G0") or cmd.startswith("G1") or cmd.startswith("G92"):
-			_cmd = ""
-			for i in cmd:
-				if i == 'X':
-					i = 'Y'
-				elif i == 'Y':
-					i = 'X'
-				_cmd += i
-			return _cmd
-		return cmd #nothing to change	    
+		g_parsed = gcode2dict(cmd)
+		if g_parsed["cmd"] == "G0" or g_parsed["cmd"] == "G1" or g_parsed["cmd"] == GCODE_CMD_SET_POS:
+			x=self._get_and_delete(g_parsed,"X")
+			y=self._get_and_delete(g_parsed,"Y")
+			if y is not None:
+				g_parsed["X"]=y
+			if x is not None:
+				g_parsed["Y"]=x
+			return dict2gcode(g_parsed)
+		return cmd #nothing to change
 	pass
 # --------------------------------------------------------------
 class COffsetXY:
@@ -159,16 +168,16 @@ class COffsetXY:
 
 	def run(self, cmd):
 		g_parsed = gcode2dict(cmd)
-		if g_parsed["cmd"] == "G0" or g_parsed["cmd"] == "G1":
-			# add offet for absolute only
+		if g_parsed["cmd"] == "G0" or g_parsed["cmd"] == "G1" or g_parsed["cmd"] == GCODE_CMD_SET_POS:
+			# add offset for absolute only
 			if "X" in g_parsed:
-				dest_x = g_parsed["X"] + self._offs_X
+				g_parsed["X"] = g_parsed["X"] + self._offs_X
 				pass
 			if "Y" in g_parsed:
-				dest_y = g_parsed["Y"] + self._offs_Y
+				g_parsed["Y"] = g_parsed["Y"] + self._offs_Y
 				pass
 			return dict2gcode(g_parsed)
-		return cmd #nothing to change	    
+		return cmd #nothing to change
 	pass
 
 
@@ -213,8 +222,6 @@ def testCB(response):
 if __name__ == '__main__':
 	from inspect import getframeinfo, stack
 	print("test begin")
-
-	test_line()
 	gc = gcode2dict("G1.1")
 	test_isEQ(gc['cmd'], "G1.1")
 	gc = gcode2dict("G11")
@@ -224,12 +231,29 @@ if __name__ == '__main__':
 	test_isEQ(gc['cmd'], "G11")
 	test_isEQ(gc['X'], 10)
 
-	gc = gcode2dict("G13 X1 Y10.2 Z23 F500")
+	gc = gcode2dict("G13 X1 Y10.2 Z23.1234 F500")
 	test_isEQ(gc['cmd'], "G13")
 	test_isEQ(gc['X'], 1)
 	test_isEQ(gc['Y'], 10.2)
-	test_isEQ(gc['Z'], 23)
+	test_isEQ(gc['Z'], 23.1234)
 	test_isEQ(gc['F'], 500)
 
-	test_isEQ(dict2gcode(gc), "G13 X1.0 Y10.2 Z23.0 F500.0")
+	test_isEQ(dict2gcode(gc), "G13 X1 Y10.2 Z23.1234 F500")
+	
+	offset_xy=COffsetXY(1,10)
+	test_isEQ(offset_xy.run("G0 X1 F500"),"G0 X2 F500")
+	test_isEQ(offset_xy.run("G1 X1"),"G1 X2")
+	test_isEQ(offset_xy.run("G92 X1"),"G92 X2")
+	test_isEQ(offset_xy.run("G0 Y1"),"G0 Y11")
+	test_isEQ(offset_xy.run("G1 Y1"),"G1 Y11")
+	test_isEQ(offset_xy.run("G0 X1 Y1"),"G0 X2 Y11")
+
+	swap_xy=CSwapXY()
+	test_isEQ(swap_xy.run("G0 X1"),"G0 Y1")
+	test_isEQ(swap_xy.run("G1 X1"),"G1 Y1")
+	test_isEQ(swap_xy.run("G92 X1"),"G92 Y1")
+	test_isEQ(swap_xy.run("G0 Y1"),"G0 X1")
+	test_isEQ(swap_xy.run("G1 Y1"),"G1 X1")
+	test_isEQ(swap_xy.run("G0 X1 Y10"),"G0 X10 Y1")
+
 	print("test done")
