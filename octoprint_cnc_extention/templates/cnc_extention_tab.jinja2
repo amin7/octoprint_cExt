@@ -10,13 +10,9 @@
     </div>
     <textarea id="id_cnc_extention_log" rows="7" style="width:100%;resize:vertical;" readonly ></textarea>
     <div class="row-fluid">
-        <button class="btn btn-secondary span6" data-bind="enable: is_file_analysis()&&(!is_engrave_avaliable()), click:function(){send_single_cmd('swap_xy')}">swap_xy</button>
-        <button class="btn btn-danger span6" data-bind="click:function(){send_single_cmd('plane_reset')}">plane_reset</button>
-    </div>
-    <br>
-    <div class="row-fluid"> 
-        <button class="btn span6" type="button" data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPositionX0Y0);send_single_cmd('probe_area_stop');}">Set XY(0)</button>
-        <button class="btn span6" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_SetPositionZ0);}">set Z(0)</button>
+        <button class="btn btn-secondary span4" data-bind="enable: is_file_analysis()&&(!is_engrave_avaliable()), click:function(){send_single_cmd('swap_xy')}">swap_xy</button>
+        <button class="btn btn-danger span4" data-bind="click:function(){send_single_cmd('plane_reset')}">plane_reset</button>
+        <button class="btn span4"data-bind="enable: isOperational(),click: function() { OctoPrint.control.sendGcode(cmd_SetPositionX0Y0);send_single_cmd('probe_area_stop');}">Set XY(0)</button>
     </div>
     <br>
     <div class="row-fluid">
@@ -45,9 +41,9 @@
             <button id="cnc_extention_X_step_minus" class="btn btn-info btn-block" data-bind="enable: isOperational(), click: function() {relative_move_xy(-move_step_x(),0);}">X-</button>
         </div>
         <div class="btn-group btn-group-vertical span3">
-            <button id="cnc_extention_Y_step_minus" class="btn btn-info btn-block" data-bind="enable: isOperational(), click: function() {relative_move_xy(0,-move_step_y());}">Y-</button>
+            <button id="cnc_extention_Y_step_plus" class="btn btn-info btn-block" data-bind="enable: isOperational(), click: function() {relative_move_xy(0,move_step_y());}">Y+</button>
             <div class="span12"></div>
-            <button id="cnc_extention_Y_step_plus" class="btn btn-info btn-block" data-bind="enable: isOperational(), click: function() {relative_move_xy(0, move_step_y());} ">Y+</button>
+            <button id="cnc_extention_Y_step_minus" class="btn btn-info btn-block" data-bind="enable: isOperational(), click: function() {relative_move_xy(0,-move_step_y());} ">Y-</button>
         </div>
 
         <div class="span3">
@@ -57,7 +53,7 @@
         <div class="btn-group btn-group-vertical span3">
             <button id="cnc_extention_Z_step_plus" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {relative_move_z(move_step_z());}">Z+</button> 
             <div class="span12"></div>
-            <button id="cnc_extention_Z_step_minus" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {probe_threshold(move_step_z());}">Z-</button> 
+            <button id="cnc_extention_Z_step_minus" class="btn btn-info btn-block" data-bind="enable: isOperational(),click: function() {probe(move_step_z());}">Z-</button> 
         </div>
     </div>
     <br>
@@ -71,5 +67,8 @@
         </div>
         <label class="span4">Probe: <span data-bind="text:probing_state "></span></label>
     </div>
-    <button class="btn btn-primary btn-block" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_DisableSteppers); }" >Motors Off</button>
+    <div class="row-fluid">
+        <button class="btn btn-primary span9" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_DisableSteppers); }" >Motors Off</button>
+        <button class="btn span3" data-bind="enable: isOperational(), click: function() { OctoPrint.control.sendGcode(cmd_SetPositionZ0);}">set Z(0)</button>
+    </div>
 </div>

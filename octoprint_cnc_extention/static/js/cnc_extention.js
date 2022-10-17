@@ -11,7 +11,6 @@ $(function() {
       self.settingsViewModel = parameters[0];
       self.printerProfilesViewModel = parameters[1];
 
-      self.z_threshold=ko.observable();
       self.z_travel=ko.observable();  
 
       self.level_delta_z=ko.observable();
@@ -72,7 +71,6 @@ $(function() {
 
       self._upd_settings=function(){
         plugin_setting=self.settingsViewModel.settings.plugins.cnc_extention;
-        self.z_threshold(plugin_setting.z_threshold());
         self.z_travel(plugin_setting.z_travel());
         self.level_delta_z(plugin_setting.level_delta_z());
       }
@@ -255,13 +253,6 @@ $(function() {
         OctoPrint.control.sendGcode([self.cmd_AbsolutePositioning,'G38.3 F'+feed+' Z'+z]);
       }
 
-
-    self.probe_threshold = function(distanse) {
-      let _distanse=parseFloat(distanse);
-      _distanse+=parseFloat(self.z_threshold());
-      self.probe(_distanse,self.settingsViewModel.settings.plugins.cnc_extention.speed_probe())
-    }
-
     self._send_cmd=function(_data) {
       console.log("_send_cmd", _data);
       $.ajax({
@@ -273,9 +264,9 @@ $(function() {
       });
     };
 
-    self.probe = function(_distanse,_feed) {
+    self.probe = function(_distanse) {
       //console.log(_distanse);
-      self._send_cmd({command: "probe", distanse: parseFloat(_distanse), feed: parseFloat(_feed) });
+      self._send_cmd({command: "probe", distanse: parseFloat(_distanse), feed: parseFloat(self.settingsViewModel.settings.plugins.cnc_extention.speed_probe()) });
     };
 //-----------------------------------------------------------
     self.send_single_cmd=function(cmd) {

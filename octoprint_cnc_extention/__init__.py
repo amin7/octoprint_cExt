@@ -35,7 +35,6 @@ class CextPlugin(octoprint.plugin.SettingsPlugin,
 	def get_settings_defaults(self):
 		return dict(
 			speed_probe=40,
-			z_threshold=1,
 			z_travel=10,
 			level_delta_z=1,
 			grid_area=10,
