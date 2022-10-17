@@ -18,6 +18,7 @@ $(function() {
 
       self.isOperational = ko.observable();
       self.file_name = ko.observable("");
+      self.plane_file_name = ko.observable("");
       self.is_file_analysis = ko.observable(false);
       self.is_engrave_avaliable = ko.observable(false);
 
@@ -151,8 +152,10 @@ $(function() {
           if(data.plane){
             self.plane_width(data.plane.width);
             self.plane_depth(data.plane.depth);
+            self.plane_file_name(data.plane.filename)
             self.is_file_analysis(true);
           }else{
+            self.plane_file_name("")
             self.is_file_analysis(false);
           }
         }
